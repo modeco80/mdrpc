@@ -7,6 +7,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: cmake configure
-      run: mkdir build && cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      run: mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
     - name: Build
       run: cd build && make -j $(($(nproc) + 1))
