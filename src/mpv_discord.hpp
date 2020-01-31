@@ -1,3 +1,4 @@
+#include <discord_rpc.h>
 
 namespace mdrpc {
 
@@ -7,7 +8,12 @@ namespace mdrpc {
 			: IMpvPlugin(handle)  {
 			// initalize discord stuff&things
 		}
-		
+
+		/**
+		 * Processes events as they are recieved.
+		 * 
+		 * \param[in] ev Native MPV event.
+		 */
 		void ProcessEvent(mpv_event* ev) {
 			if(!ev)
 				return;
@@ -20,14 +26,16 @@ namespace mdrpc {
 
 
 
-			property::get_string_osd(mpvHandle, "time-pos", [](char* str) {
-				std::cout << "time is " << str << '\n';	
+			property::get_node_map(mpvHandle, "metadata", [](mpv_node node) {
+					for(int i = 0; i < node.u.list->num; ++i) {
+						std::cout << node.u.list->keys[i] << ": "; property::print_node(node.u.list->values[i]);
+					}
 			});
 		}
 
-		// holds a copy of the last processed event for debouncing purposes
-		// (so that we don't process the same event multiple times, 
-		// for responsiveness reasons & not spamming the discord thread with messages mostly)
+		/**
+		 * Last processed event, used for debounce purposes
+		 */
 		mpv_event last_processed_ev;
  
 	};
