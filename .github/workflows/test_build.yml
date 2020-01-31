@@ -7,7 +7,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install library development files
-      run: sudo apt install -y libmpv-dev
+      run: sudo apt update && sudo apt install -y libmpv-dev
     - name: cmake configure
       run: mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
     - name: Build
