@@ -211,6 +211,39 @@ namespace mdrpc {
 			mpv_free_node_contents(&node);
 		}
 
+		// === Conversions ===
+
+		/**
+		 * Get an string property converted to a std::string.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 */
+		std::string get_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::string str;
+			get_string(handle, property_name, [&](char* returned) {
+				str.resize(strlen(returned));
+				memcpy(&str[0], &returned, strlen(returned));
+			});
+			return str;
+		}
+
+		/**
+		 * Get an OSD-string property converted to a std::string.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 */
+		std::string get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::string str;
+			get_string_osd(handle, property_name, [&](char* returned) {
+				str.resize(strlen(returned));
+				for(int i = 0; i < strlen(returned); ++i)
+					str.push_back(returned[i]);
+			});
+			return str;
+		}
+
 		/**
 		 * Get an node map property converted to a C++ map.
 		 * 
@@ -220,7 +253,7 @@ namespace mdrpc {
 		std::map<std::string, mpv_node> get_node_map_converted(SafeMpvHandle& handle, const std::string& property_name) {
 			std::map<std::string, mpv_node> values;
 
-			get_node_map(handle, property_name.c_str(), [&](mpv_node node) {
+			get_node_map(handle, property_name, [&](mpv_node node) {
 					if(node.u.list->num == 0)
 						return;
 
@@ -244,7 +277,7 @@ namespace mdrpc {
 		std::vector<mpv_node> get_node_array_converted(SafeMpvHandle& handle, const std::string& property_name) {
 			std::vector<mpv_node> values;
 
-			get_node_array(handle, property_name.c_str(), [&](mpv_node node) {
+			get_node_array(handle, property_name, [&](mpv_node node) {
 					if(node.u.list->num == 0)
 						return;
 
@@ -258,6 +291,16 @@ namespace mdrpc {
 			return values;
 		}
 
+		/**
+		 * Convert a existing string node to a std::string
+		 */
+		std::string convert_node_string(mpv_node node) {
+			std::string s;
+			s.resize(strlen(node.u.string));
+			for(int i = 0; i < strlen(node.u.string); ++i)
+				s.push_back(node.u.string[i]);
+			return s;
+		}
 	}
 
 }
