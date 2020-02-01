@@ -29,7 +29,7 @@ namespace mdrpc {
 			if(!ev)
 				return;
 
-			std::cout << "Someone forgot to implement IMpvPlugin::ProcessEvent! Event ID " << ev->event_id << '\n';
+			std::cout << "IMpvPlugin::ProcessEvent base Event ID " << ev->event_id << '\n';
 		}
 		
     };

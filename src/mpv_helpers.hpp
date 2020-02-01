@@ -1,7 +1,12 @@
+// === Helper utility functions for better/modern C++ interaction with MPV ===
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
+#include <map>
+#include <vector>
 
 // mpv types
 #include <mpv/client.h>
@@ -9,7 +14,7 @@
 namespace mdrpc {
 
 	/**
-	 * Safe handle concept for mpv handles
+	 * Safe handle concept for handles to MPV.
 	 */
 	struct SafeMpvHandle {
 		SafeMpvHandle() 
@@ -32,7 +37,7 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Cast operator. Returns the result of SafeMpvhandle::get().
+		 * Cast operator. Returns the result of SafeMpvHandle::get().
 		 */
 		operator mpv_handle*() { return get(); }
 
@@ -44,7 +49,7 @@ namespace mdrpc {
 	namespace property {
 		
 		/**
-		 * Get a bool/flag property.
+		 * Get an bool/flag property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -61,7 +66,7 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Get a int64 property.
+		 * Get an int64 property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -78,7 +83,7 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Get a double property.
+		 * Get an double property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -95,7 +100,7 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Get a string property.
+		 * Get an string property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -109,7 +114,7 @@ namespace mdrpc {
 				return;
 
 			// while it's *safe* to assume at this point we have a valid value
-			// (we've passed property and collected 200$), we still check
+			// (we've passed go and collected 200$), we still check
 			if(!value)
 				return;
 	
@@ -121,7 +126,7 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Get a string property with OSD formatting.
+		 * Get an string property with OSD formatting.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -139,7 +144,31 @@ namespace mdrpc {
 		}
 		
 		/**
-		 * Get a node map property.
+		 * Get an singular node property.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 * \param[out] callback Callback function
+		 */
+		template<class Functor>
+		void get_node(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+			mpv_node node;
+			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
+				return;
+			
+			// Already handled by the below get_node_map and get_node_array functions
+			// (as well as conversion functions)
+			if(node.format == MPV_FORMAT_NODE_ARRAY || node.format == MPV_FORMAT_NODE_MAP) {
+				mpv_free_node_contents(&node);
+				return;
+			}
+
+			callback(node);
+			mpv_free_node_contents(&node);
+		}
+
+		/**
+		 * Get an node map property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -160,18 +189,73 @@ namespace mdrpc {
 			mpv_free_node_contents(&node);
 		}
 
-		// print singular node
-		// (debugging only)
-		void print_node(mpv_node node) {
-			switch(node.format) {
-				default:
-					std::cout << "ignoring type " << (int)node.format << '\n';
-				break;
-
-				case MPV_FORMAT_STRING:
-					std::cout << node.u.string << '\n';
-				break;
+		/**
+		 * Get an node array property.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 * \param[out] callback Callback function
+		 */
+		template<class Functor>
+		void get_node_array(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+			mpv_node node;
+			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
+				return;
+			
+			if(node.format != MPV_FORMAT_NODE_ARRAY) {
+				mpv_free_node_contents(&node);
+				return;
 			}
+
+			callback(node);
+			mpv_free_node_contents(&node);
+		}
+
+		/**
+		 * Get an node map property converted to a C++ map.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 */
+		std::map<std::string, mpv_node> get_node_map_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::map<std::string, mpv_node> values;
+
+			get_node_map(handle, property_name.c_str(), [&](mpv_node node) {
+					if(node.u.list->num == 0)
+						return;
+
+					// convert map
+					for(int i = 0; i < node.u.list->num; ++i) {
+						mpv_node n;
+						memcpy(&n, &node.u.list->values[i], sizeof(mpv_node));
+						values[node.u.list->keys[i]] = n;
+					}
+			});
+
+			return values;
+		}
+
+		/**
+		 * Get an node array property converted to a C++ vector.
+		 * 
+		 * \param[in] handle Safe handle to use
+		 * \param[in] property_name Name of property to fetch
+		 */
+		std::vector<mpv_node> get_node_array_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::vector<mpv_node> values;
+
+			get_node_array(handle, property_name.c_str(), [&](mpv_node node) {
+					if(node.u.list->num == 0)
+						return;
+
+					for(int i = 0; i < node.u.list->num; ++i) {
+						mpv_node n;
+						memcpy(&n, &node.u.list->values[i], sizeof(mpv_node));
+						values.push_back(n);
+					}
+			});
+
+			return values;
 		}
 
 	}

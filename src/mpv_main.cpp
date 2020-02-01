@@ -1,10 +1,4 @@
-//
-// main source file for mdrpc2
-//
-
 #include "mpv_plugin.hpp"
-
-// discord plugin
 #include "mpv_discord.hpp"
 
 // Static heap allocated plugin
