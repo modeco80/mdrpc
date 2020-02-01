@@ -56,7 +56,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_bool(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_bool(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			int flag_value;
 
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_FLAG, &flag_value) < 0)
@@ -73,7 +73,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_int64(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_int64(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			std::int64_t value;
 
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_INT64, &value) < 0)
@@ -90,7 +90,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_double(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_double(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			double value;
 
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_DOUBLE, &value) < 0)
@@ -107,7 +107,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_string(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_string(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			char* value = nullptr;
 
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_STRING, &value) < 0)
@@ -133,7 +133,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_string_osd(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_string_osd(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			char* value = mpv_get_property_osd_string(handle, property_name.c_str());
 
 			if(!value)
@@ -151,7 +151,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_node(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_node(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			mpv_node node;
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
 				return;
@@ -175,7 +175,7 @@ namespace mdrpc {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_node_map(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_node_map(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			mpv_node node;
 			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
 				return;
