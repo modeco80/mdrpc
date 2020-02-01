@@ -223,7 +223,8 @@ namespace mdrpc {
 			std::string str;
 			get_string(handle, property_name, [&](char* returned) {
 				str.resize(strlen(returned));
-				memcpy(&str[0], &returned, strlen(returned));
+				for(int i = 0; i < strlen(returned); ++i)
+					str.push_back(returned[i]);
 			});
 			return str;
 		}
