@@ -28,6 +28,9 @@ namespace mdrpc {
          */
         template<class F>
         void Start(std::uint16_t interval, F fun) {
+            if(runner_thread.get() != nullptr || started)
+                Stop();
+
             runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F>, this, interval, fun)));
         }
 
@@ -40,6 +43,9 @@ namespace mdrpc {
          */
         template<class F, class ...Args>
         void Start(std::uint16_t interval, F fun, Args... args) {
+            if(runner_thread.get() != nullptr || started)
+                Stop();
+                
             runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, Args...>, this, interval, fun, std::forward<Args...>(args...))));
         }
 
@@ -106,6 +112,10 @@ namespace mdrpc {
          */ 
         std::shared_ptr<std::thread> runner_thread;
 
+
+        /**
+         * Whether or not the runner thread is active.
+         */ 
         bool started = false;
 
         /**
