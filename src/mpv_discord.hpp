@@ -3,9 +3,9 @@
 
 namespace mdrpc {
 
-	constexpr static char discord_appid[] = "";
-	constexpr static char discord_large[] = "mpv";
-
+	/**
+	 * Discord state enumeration
+	 */
 	enum DiscordState : std::uint8_t {
 		Idle,
 		Paused,
@@ -17,6 +17,19 @@ namespace mdrpc {
 		Count_
 	};
 
+	/**
+	 * Discord application ID
+	 */
+	constexpr static char discord_appid[] = "";
+
+	/**
+	 * Large image key
+	 */
+	constexpr static char discord_large[] = "mpv-logo";
+
+	/**
+	 * Small image key conversions of DiscordState
+	 */ 
 	constexpr std::array<const char*, DiscordState::Count_> discord_keys = {{
 		"mpv-idle",
 		"mpv-paused",
@@ -25,36 +38,72 @@ namespace mdrpc {
 		"mpv-youtube"
 	}};
 
+	/**
+	 * Human-readable conversions of DiscordState
+	 */ 
+	constexpr std::array<const char*, DiscordState::Count_> discord_states = {{
+		"Idle",
+		"Paused",
+		"Playing",
+		"Fetching Remote Content",
+		"Fetching using Youtube-DL"
+	}};
 
 	struct DiscordPlugin : public IMpvPlugin {
 
 		DiscordPlugin(mpv_handle* handle) 
 			: IMpvPlugin(handle)  {
 
-			int local_i = 0;
-			runner_test.Start(1000, [&, &local_i](){
-				std::cout << "test, every 1000ms!\n";
-
-				if(local_i == 10) {
-					std::cout << "exiting thread\n";
-					runner_test.Stop();
-				}
-
-				local_i++;
+			discord_runner.Start(15000, [&]() {
+				DiscordInterval();
+			}, [&]() {
+				DiscordInit();
 			});
-
-			runner_test_args.Start(1000, [&](int arg){
-				std::cout << "my arg is " << arg << '\n'; 
-			}, 100);
 		}
 
 		~DiscordPlugin() {
 			if(!cached_metadata.empty())
 				cached_metadata.clear();
+
+			discord_runner.Stop();
+		}
+
+
+		void DiscordInit() {
+			using namespace std::placeholders;
+			
+			DiscordEventHandlers handlers;
+			handlers.ready = std::bind(&DiscordPlugin::DiscordReady, this, _1);
+			handlers.disconnected = std::bind(&DiscordPlugin::DiscordDisconnect, this, _1, _2);
+			handlers.errored = std::bind(&DiscordPlugin::DiscordError, this, _1, _2);
+
+			std::cout << "MDRPC2: Initalizing Discord\n\n\n";
+			Discord_Initialize(discord_appid, &handlers, 1, NULL);
+		}
+
+		void DiscordInterval() {
+			// Update discord stuff
+		}
+
+		// Discord Handlers
+
+		void DiscordReady(const DiscordUser* user) {
+			if(!user)
+				return; // ?
+			
+			std::cout << "MDRPC2: Got discord for " << user->username << "#" << user->discriminator << "\n\n";
+		}
+
+		void DiscordDisconnect(int error, const char* reason) {
+			std::cout << "MDRPC2: Disconnected (" << error << " \"" << reason << "\"\n\n\n";
+		}
+
+		void DiscordError(int error, const char* reason) {
+			std::cout << "MDRPC2: Error (" << error << " \"" << reason << "\"\n\n";
 		}
 
 		/**
-		 * Processes events as they are recieved.
+		 * Processes events as they are recieved from MPV.
 		 * 
 		 * \param[in] ev Native MPV event.
 		 */
@@ -65,6 +114,8 @@ namespace mdrpc {
 			switch(ev->event_id) {
 				default:
 					break;
+
+				// TODO: Implement more
 
 				case MPV_EVENT_FILE_LOADED: {
 					cached_metadata.clear();
@@ -79,18 +130,18 @@ namespace mdrpc {
 		 * If fetching from our cache fails, we go back to the filename
 		 */
 		std::string GetFormattedSong() {
-			const std::array<const char*, 2> artist_keys = {{
+			constexpr std::array<const char*, 2> artist_keys = {{
 				"artist",
 				"ARTIST"
 			}};
 
-			const std::array<const char*, 3> title_keys = {{
+			constexpr std::array<const char*, 3> title_keys = {{
 				"title",
 				"TITLE",
 				"icy-title"
 			}};
 
-			const std::array<const char*, 2> album_keys = {{
+			constexpr std::array<const char*, 2> album_keys = {{
 				"album",
 				"ALBUM"
 			}};
@@ -152,13 +203,8 @@ namespace mdrpc {
 		 * Cached file metadata for the file that is currently playing
 		 */ 
 		std::map<std::string, mpv_node> cached_metadata;
-
-		std::thread discord_thread;
 		
-		mdrpc::PerIntervalRunner runner_test;
-
-		mdrpc::PerIntervalRunner runner_test_args;
-
+		mdrpc::PerIntervalRunner discord_runner;
 	};
 
 }

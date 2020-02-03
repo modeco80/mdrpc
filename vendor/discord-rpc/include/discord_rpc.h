@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
+#include <functional>
 extern "C" {
 #endif
 
@@ -31,12 +32,22 @@ typedef struct DiscordUser {
 } DiscordUser;
 
 typedef struct DiscordEventHandlers {
+#if 0
     void (*ready)(const DiscordUser* request);
     void (*disconnected)(int errorCode, const char* message);
     void (*errored)(int errorCode, const char* message);
     void (*joinGame)(const char* joinSecret);
     void (*spectateGame)(const char* spectateSecret);
     void (*joinRequest)(const DiscordUser* request);
+#else
+    // hack so I can use bind (and therefore, use class member functions)
+    std::function<void(const DiscordUser*)> ready;
+    std::function<void(int, const char*)> disconnected;
+    std::function<void(int, const char*)> errored;
+    std::function<void(const char*)> joinGame;
+    std::function<void(const char*)> spectateGame;
+    std::function<void(const DiscordUser*)> joinRequest;
+#endif
 } DiscordEventHandlers;
 
 #define DISCORD_REPLY_NO 0

@@ -59,6 +59,7 @@ if(UNIX)
         -Wall
         -Wextra
         -Wpedantic
+        -fPIC
     )
 
     if (${WARNINGS_AS_ERRORS})

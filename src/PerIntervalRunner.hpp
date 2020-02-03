@@ -23,7 +23,7 @@ namespace mdrpc {
         /**
          * Start calling a function on an interval without arguments.
          * 
-         * \param[in] interval Interval to call function,
+         * \param[in] interval Interval to call function
          * \param[in] fun Function to call on an interval
          */
         template<class F>
@@ -35,9 +35,24 @@ namespace mdrpc {
         }
 
         /**
+         * Start calling a function on an interval without arguments.
+         * Also calls an init function
+         * 
+         * \param[in] interval Interval to call function
+         * \param[in] fun Function to call on an interval
+         */
+        template<class F, class FInit>
+        void Start(std::uint16_t interval, F fun, FInit initFun) {
+            if(runner_thread.get() != nullptr || started)
+                Stop();
+
+            runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, FInit>, this, interval, fun, initFun)));
+        }
+
+        /**
          * Start calling a function on an interval with arguments.
          * 
-         * \param[in] interval Interval to call function,
+         * \param[in] interval Interval to call function
          * \param[in] fun Function to call on an interval
          * \param[in] args All arguments to pass to the function
          */
@@ -72,6 +87,31 @@ namespace mdrpc {
         template<class F>
         void Runner(std::uint16_t interval, F fun) {
             started = true;
+
+            while(true) {
+                std::lock_guard<std::mutex> lock(stop_mutex);
+                if(stop)
+                    break;
+
+                fun();
+                std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+            }
+
+            started = false;
+        }
+
+       /**
+         * Generic function for the the thread to run.
+         * 
+         * \param[in] interval Interval (in milliseconds) passed by Start<F>()
+         * \param[in] fun Function to call
+         * \param[in] initFun run on thread init
+         */
+        template<class F, class FInit>
+        void Runner(std::uint16_t interval, F fun, FInit initFun) {
+            started = true;
+
+            initFun();
 
             while(true) {
                 std::lock_guard<std::mutex> lock(stop_mutex);
