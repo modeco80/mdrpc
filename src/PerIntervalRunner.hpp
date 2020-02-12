@@ -4,6 +4,11 @@
 #include <chrono>
 #include <memory>
 
+//
+// define PIR_NOT_USED_BY_MDRPC to gain access to a Start() overload that can handle calling 
+// the interval function with arguments
+//
+
 namespace mdrpc {
 
     /**
@@ -49,6 +54,7 @@ namespace mdrpc {
             runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, FInit>, this, interval, fun, initFun)));
         }
 
+#ifdef PIR_NOT_USED_BY_MDRPC
         /**
          * Start calling a function on an interval with arguments.
          * 
@@ -63,6 +69,7 @@ namespace mdrpc {
                 
             runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, Args...>, this, interval, fun, std::forward<Args...>(args...))));
         }
+#endif
 
         /**
          * Stop the current runner.
@@ -75,6 +82,13 @@ namespace mdrpc {
             stop = true;
             stop_mutex.unlock();
         }
+
+		/**
+		 * Returns true if this runner is currently started.
+		 */
+		const bool Running() const {
+			return started; 
+		}
 
     private:
 
@@ -125,6 +139,7 @@ namespace mdrpc {
             started = false;
         }
 
+#ifdef PIR_NOT_USED_BY_MDRPC
         /**
          * Generic function for the the thread to run.
          * 
@@ -146,6 +161,7 @@ namespace mdrpc {
 
             started = false;
         }
+#endif
 
         /**
          * Runner thread.

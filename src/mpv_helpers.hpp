@@ -14,17 +14,16 @@
 namespace mdrpc {
 
 	/**
-	 * Safe handle concept for handles to MPV.
+	 * Safe handle construct for handles to MPV.
+	 * Will throw exceptions if the handle is somehow null
 	 */
 	struct SafeMpvHandle {
 		SafeMpvHandle() 
 			: h(nullptr) {
-
 		}
 	
 		SafeMpvHandle(mpv_handle* handle) 
 			: h(handle) {
-
 		}
 
 		/**
@@ -219,13 +218,15 @@ namespace mdrpc {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::string get_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
-			std::string str;
+		inline std::unique_ptr<std::string> get_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::unique_ptr<std::string> str(new std::string());
+
 			get_string(handle, property_name, [&](char* returned) {
-				str.resize(strlen(returned));
+				str->resize(strlen(returned));
 				for(int i = 0; i < strlen(returned); ++i)
-					str.push_back(returned[i]);
+					str->push_back(returned[i]);
 			});
+
 			return str;
 		}
 
@@ -235,13 +236,15 @@ namespace mdrpc {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::string get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
-			std::string str;
+		inline std::unique_ptr<std::string> get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::unique_ptr<std::string> str(new std::string());
+
 			get_string_osd(handle, property_name, [&](char* returned) {
-				str.resize(strlen(returned));
+				str->resize(strlen(returned));
 				for(int i = 0; i < strlen(returned); ++i)
-					str.push_back(returned[i]);
+					str->push_back(returned[i]);
 			});
+
 			return str;
 		}
 
@@ -295,13 +298,35 @@ namespace mdrpc {
 		/**
 		 * Convert a existing string node to a std::string
 		 */
-		inline std::string convert_node_string(mpv_node node) {
-			std::string s;
-			s.resize(strlen(node.u.string));
+		inline std::unique_ptr<std::string> convert_node_string(mpv_node node) {
+			std::unique_ptr<std::string> s(new std::string());
+			s->resize(strlen(node.u.string));
+
+			// slow but i'll fix whenever it becomes a problem
 			for(int i = 0; i < strlen(node.u.string); ++i)
-				s.push_back(node.u.string[i]);
+				s->push_back(node.u.string[i]);
+
 			return s;
 		}
+
+		/**
+		 * Watch a property.
+		 * Returns the ID (a random number) for use in unwatch().
+		 */
+		inline std::uint64_t watch(SafeMpvHandle& handle, const std::string& property_name) {
+			std::uint64_t id = (std::uint64_t)rand();
+			
+			return id;
+		}
+
+
+		/**
+		 * Un-watch a property.
+		 */
+		inline void unwatch(SafeMpvHandle& handle, std::uint64_t id) {
+		}
+
+		
 	}
 
 }

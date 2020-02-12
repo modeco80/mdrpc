@@ -20,7 +20,7 @@ namespace mdrpc {
 	/**
 	 * Discord application ID
 	 */
-	constexpr static char discord_appid[] = "";
+	constexpr static char discord_appid[] = "673967887387590658";
 
 	/**
 	 * Large image key
@@ -34,7 +34,7 @@ namespace mdrpc {
 		"mpv-idle",
 		"mpv-paused",
 		"mpv-playing",
-		"mpv-fetching",
+		"mpv-buffering",
 		"mpv-youtube"
 	}};
 
@@ -45,27 +45,19 @@ namespace mdrpc {
 		"Idle",
 		"Paused",
 		"Playing",
-		"Fetching Remote Content",
-		"Fetching using Youtube-DL"
+		"Buffering Remote Content",
+		"Youtube-DL"
 	}};
 
 	struct DiscordPlugin : public IMpvPlugin {
 
 		DiscordPlugin(mpv_handle* handle) 
-			: IMpvPlugin(handle)  {
-
-			discord_runner.Start(15000, [&]() {
-				DiscordInterval();
-			}, [&]() {
-				DiscordInit();
-			});
+			: IMpvPlugin(handle) {
 		}
 
 		~DiscordPlugin() {
 			if(!cached_metadata.empty())
 				cached_metadata.clear();
-
-			discord_runner.Stop();
 		}
 
 
@@ -73,33 +65,47 @@ namespace mdrpc {
 			using namespace std::placeholders;
 			
 			DiscordEventHandlers handlers;
+			memset(&handlers, 0, sizeof(DiscordEventHandlers));
 			handlers.ready = std::bind(&DiscordPlugin::DiscordReady, this, _1);
 			handlers.disconnected = std::bind(&DiscordPlugin::DiscordDisconnect, this, _1, _2);
 			handlers.errored = std::bind(&DiscordPlugin::DiscordError, this, _1, _2);
 
-			std::cout << "MDRPC2: Initalizing Discord\n\n\n";
 			Discord_Initialize(discord_appid, &handlers, 1, NULL);
+#ifdef DISCORD_DISABLE_IO_THREAD
+			Discord_UpdateConnection();
+#endif
 		}
 
-		void DiscordInterval() {
-			// Update discord stuff
-		}
+		void DiscordUpdate() {
+			static DiscordRichPresence rpc;
+			rpc.largeImageKey = discord_large;
+			rpc.largeImageText = "mpv";
 
-		// Discord Handlers
+			rpc.details = discord_states[discord_state];
+
+			auto song = GetFormattedSong();
+
+			std::cout << "piss " << strlen(song->c_str()) << "\n";
+		// some lifetime bullshit might make this not work
+			rpc.state = song->c_str();
+
+			Discord_UpdatePresence(&rpc);
+			Discord_RunCallbacks();
+#ifdef DISCORD_DISABLE_IO_THREAD
+			Discord_UpdateConnection();
+#endif
+		}
 
 		void DiscordReady(const DiscordUser* user) {
-			if(!user)
-				return; // ?
-			
-			std::cout << "MDRPC2: Got discord for " << user->username << "#" << user->discriminator << "\n\n";
+			std::cout << "mdrpc2: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
 		}
 
 		void DiscordDisconnect(int error, const char* reason) {
-			std::cout << "MDRPC2: Disconnected (" << error << " \"" << reason << "\"\n\n\n";
+			std::cout << "mdrpc2: Discord disconnected (" << error << " \"" << reason << "\"\n";
 		}
 
 		void DiscordError(int error, const char* reason) {
-			std::cout << "MDRPC2: Error (" << error << " \"" << reason << "\"\n\n";
+			std::cout << "mdrpc2: Discord error (" << error << " \"" << reason << "\"\n";
 		}
 
 		/**
@@ -115,13 +121,25 @@ namespace mdrpc {
 				default:
 					break;
 
-				// TODO: Implement more
-
 				case MPV_EVENT_FILE_LOADED: {
+					discord_state = DiscordState::Playing;
 					cached_metadata.clear();
 					cached_metadata = property::get_node_map_converted(mpvHandle, "metadata");
-					std::cout << GetFormattedSong() << '\n';
-				}
+
+					if(discord_runner.Running())
+						discord_runner.Stop();
+
+					discord_runner.Start(5000, [&]() {
+						DiscordUpdate();
+					}, [&]() {
+						// Initalize discord
+						DiscordInit();
+					});
+				} break;
+				
+				case MPV_EVENT_IDLE: {
+					discord_state = DiscordState::Idle;
+				} break;
 			}
 		}
 
@@ -129,7 +147,7 @@ namespace mdrpc {
 		 * Returns formatted artist/title/album
 		 * If fetching from our cache fails, we go back to the filename
 		 */
-		std::string GetFormattedSong() {
+		std::unique_ptr<std::string> GetFormattedSong() {
 			constexpr std::array<const char*, 2> artist_keys = {{
 				"artist",
 				"ARTIST"
@@ -146,57 +164,69 @@ namespace mdrpc {
 				"ALBUM"
 			}};
 
-			std::string artist;
-			std::string title;
-			std::string album;
+			std::unique_ptr<std::string> artist;
+			std::unique_ptr<std::string> title;
+			std::unique_ptr<std::string> album;
 
 			for(const char* key : artist_keys) {
 				if(cached_metadata.find(key) == cached_metadata.end())
 					continue;
 
-				std::string artist_ = property::convert_node_string(cached_metadata[key]);
+				auto artist_ = property::convert_node_string(cached_metadata[key]);
 
-				if(artist_.empty())
+				if(artist_->empty())
 					continue;
 
-				artist = artist_;
+				artist.reset(artist_.release());
 			}
 
 			for(const char* key : title_keys) {
 				if(cached_metadata.find(key) == cached_metadata.end())
 					continue;
 
-				std::string title_ = property::convert_node_string(cached_metadata[key]);
+				auto title_ = property::convert_node_string(cached_metadata[key]);
 
-				if(title_.empty())
+				if(title_->empty())
 					continue;
 
-				title = title_;
+				title.reset(title_.release());
 			}
 
 			for(const char* key : album_keys) {
 				if(cached_metadata.find(key) == cached_metadata.end())
 					continue;
 
-				std::string album_ = property::convert_node_string(cached_metadata[key]);
+				auto album_ = property::convert_node_string(cached_metadata[key]);
 
-				if(album_.empty())
+				if(album_->empty())
 					continue;
 
-				album = album_;
+				album.reset(album_.release());
 			}
 
+			std::unique_ptr<std::string> line(new std::string());
+
 			// god no
-			if(artist.empty() && title.empty() && album.empty())
-				return property::get_osd_string_converted(mpvHandle, "filename");
-			else if(artist.empty() && title.empty())
-				return album;
-			else if(artist.empty() && album.empty())
-				return title;
-			else if(artist.empty())
-				return title + " on " + album;
+			if(artist.get() == nullptr && title.get() == nullptr && album.get() == nullptr)
+				*line += *property::get_osd_string_converted(mpvHandle, "filename");
+			else if(artist.get() == nullptr && title.get() == nullptr)
+				*line += *album;
+			else if(artist.get() == nullptr && album.get() == nullptr)
+				*line = *title;
+			else if(artist.get() == nullptr)
+				*line = *title + " on " + *album;
 			else
-				return artist + " - " + title + " on " + album;
+				*line = *artist + " - " + *title;
+
+			return line;
+		}
+
+		/**
+		 * Get a basic play line
+		 * (ex: "00:03:00/00:30:00" with possible "@ 0.26x @ 130%v")
+		 */
+		std::string GetPLine() {
+
 		}
 
 		/**
@@ -205,6 +235,10 @@ namespace mdrpc {
 		std::map<std::string, mpv_node> cached_metadata;
 		
 		mdrpc::PerIntervalRunner discord_runner;
+
+		DiscordState discord_state;
+
+		
 	};
 
 }
