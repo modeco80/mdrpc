@@ -148,6 +148,11 @@ namespace mdrpc {
 				case MPV_EVENT_IDLE: {
 					discord_state = DiscordState::Idle;
 				} break;
+
+				case MPV_EVENT_SHUTDOWN: {
+					if(discord_runner.Running())
+						discord_runner.Stop();
+				}
 			}
 		}
 
