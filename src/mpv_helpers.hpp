@@ -236,13 +236,13 @@ namespace mdrpc {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::unique_ptr<std::string> get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
-			std::unique_ptr<std::string> str(new std::string());
+		inline std::string get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+			std::string str;
 
 			get_string_osd(handle, property_name, [&](char* returned) {
-				str->resize(strlen(returned));
+				str.resize(strlen(returned));
 				for(int i = 0; i < strlen(returned); ++i)
-					str->push_back(returned[i]);
+					str.push_back(returned[i]);
 			});
 
 			return str;
@@ -298,16 +298,22 @@ namespace mdrpc {
 		/**
 		 * Convert a existing string node to a std::string
 		 */
-		inline std::unique_ptr<std::string> convert_node_string(mpv_node node) {
-			std::unique_ptr<std::string> s(new std::string());
-			s->resize(strlen(node.u.string));
+		inline std::string convert_node_string(mpv_node node) {
+			std::string s;
+			auto size = strlen(node.u.string);
+			s.resize(size);
 
+	
 			// slow but i'll fix whenever it becomes a problem
-			for(int i = 0; i < strlen(node.u.string); ++i)
-				s->push_back(node.u.string[i]);
+			for(int i = 0; i < size; ++i) {
+				if(node.u.string[i] != '\0')
+					s.push_back(node.u.string[i]);
+			}
 
 			return s;
 		}
+
+		// TODO
 
 		/**
 		 * Watch a property.

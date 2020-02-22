@@ -1,4 +1,5 @@
 #include <discord_rpc.h>
+#include <sstream>
 #include "PerIntervalRunner.hpp"
 
 namespace mdrpc {
@@ -23,7 +24,7 @@ namespace mdrpc {
 	constexpr static char discord_appid[] = "673967887387590658";
 
 	/**
-	 * Large image key
+	 * Large image key that mdrpc expects
 	 */
 	constexpr static char discord_large[] = "mpv-logo";
 
@@ -34,8 +35,7 @@ namespace mdrpc {
 		"mpv-idle",
 		"mpv-paused",
 		"mpv-playing",
-		"mpv-buffering",
-		"mpv-youtube"
+		"mpv-buffering"
 	}};
 
 	/**
@@ -45,8 +45,7 @@ namespace mdrpc {
 		"Idle",
 		"Paused",
 		"Playing",
-		"Buffering Remote Content",
-		"Youtube-DL"
+		"Buffering Remote Content"
 	}};
 
 	struct DiscordPlugin : public IMpvPlugin {
@@ -83,11 +82,19 @@ namespace mdrpc {
 
 			rpc.details = discord_states[discord_state];
 
-			auto song = GetFormattedSong();
+			std::string details = GetFormat();
 
-			std::cout << "piss " << strlen(song->c_str()) << "\n";
-		// some lifetime bullshit might make this not work
-			rpc.state = song->c_str();
+			std::vector<char> conv;
+			conv.resize(details.size());
+
+			std::remove_copy_if(details.begin(), details.end(), conv.begin(), [](char c) {
+				return c == '\0';
+			});
+
+			conv.push_back('\0');
+
+
+			rpc.state = conv.data();
 
 			Discord_UpdatePresence(&rpc);
 			Discord_RunCallbacks();
@@ -125,6 +132,7 @@ namespace mdrpc {
 					discord_state = DiscordState::Playing;
 					cached_metadata.clear();
 					cached_metadata = property::get_node_map_converted(mpvHandle, "metadata");
+					filename = property::get_osd_string_converted(mpvHandle, "filename");
 
 					if(discord_runner.Running())
 						discord_runner.Stop();
@@ -143,11 +151,8 @@ namespace mdrpc {
 			}
 		}
 
-		/**
-		 * Returns formatted artist/title/album
-		 * If fetching from our cache fails, we go back to the filename
-		 */
-		std::unique_ptr<std::string> GetFormattedSong() {
+
+		std::string GetFormat() {
 			constexpr std::array<const char*, 2> artist_keys = {{
 				"artist",
 				"ARTIST"
@@ -164,9 +169,8 @@ namespace mdrpc {
 				"ALBUM"
 			}};
 
-			std::unique_ptr<std::string> artist;
-			std::unique_ptr<std::string> title;
-			std::unique_ptr<std::string> album;
+			std::string artist;
+			std::string title;
 
 			for(const char* key : artist_keys) {
 				if(cached_metadata.find(key) == cached_metadata.end())
@@ -174,10 +178,10 @@ namespace mdrpc {
 
 				auto artist_ = property::convert_node_string(cached_metadata[key]);
 
-				if(artist_->empty())
+				if(artist_.empty())
 					continue;
 
-				artist.reset(artist_.release());
+				artist = std::string(artist_.begin(), artist_.end());
 			}
 
 			for(const char* key : title_keys) {
@@ -186,59 +190,37 @@ namespace mdrpc {
 
 				auto title_ = property::convert_node_string(cached_metadata[key]);
 
-				if(title_->empty())
+				if(title_.empty())
 					continue;
 
-				title.reset(title_.release());
+				title = std::string(title_.begin(), title_.end());
 			}
 
-			for(const char* key : album_keys) {
-				if(cached_metadata.find(key) == cached_metadata.end())
-					continue;
+			std::stringstream ss;
 
-				auto album_ = property::convert_node_string(cached_metadata[key]);
-
-				if(album_->empty())
-					continue;
-
-				album.reset(album_.release());
-			}
-
-			std::unique_ptr<std::string> line(new std::string());
-
-			// god no
-			if(artist.get() == nullptr && title.get() == nullptr && album.get() == nullptr)
-				*line += *property::get_osd_string_converted(mpvHandle, "filename");
-			else if(artist.get() == nullptr && title.get() == nullptr)
-				*line += *album;
-			else if(artist.get() == nullptr && album.get() == nullptr)
-				*line = *title;
-			else if(artist.get() == nullptr)
-				*line = *title + " on " + *album;
+			if(artist.empty() && title.empty())
+				ss << filename;
+			else if(artist.empty())
+				ss << title;
 			else
-				*line = *artist + " - " + *title;
+				ss << artist << " - " << title;
 
-			return line;
+			// TODO: add play line to stringstream
+
+			return ss.str();
 		}
 
-		/**
-		 * Get a basic play line
-		 * (ex: "00:03:00/00:30:00" with possible "@ 0.26x @ 130%v")
-		 */
-		std::string GetPLine() {
-
-		}
 
 		/**
 		 * Cached file metadata for the file that is currently playing
 		 */ 
 		std::map<std::string, mpv_node> cached_metadata;
+
+		std::string filename;
 		
 		mdrpc::PerIntervalRunner discord_runner;
 
 		DiscordState discord_state;
-
-		
 	};
 
 }

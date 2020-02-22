@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-#define DISCORD_DISABLE_IO_THREAD
+//#define DISCORD_DISABLE_IO_THREAD
 
 typedef struct DiscordRichPresence {
     const char* state;   /* max 128 bytes */
