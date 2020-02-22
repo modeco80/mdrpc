@@ -11,10 +11,6 @@ namespace mdrpc {
 		Idle,
 		Paused,
 		Playing,
-		Fetching,
-		// TODO: Is there a way to determine if
-		// the user is trying to fetch using youtube-dl?
-		FetchingYoutube,
 		Count_
 	};
 
