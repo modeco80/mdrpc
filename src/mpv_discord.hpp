@@ -1,6 +1,7 @@
 #include <discord_rpc.h>
 #include <sstream>
 #include "PerIntervalRunner.hpp"
+#include "Utils.hpp"
 
 namespace mdrpc {
 
@@ -11,6 +12,7 @@ namespace mdrpc {
 		Idle,
 		Paused,
 		Playing,
+		Buffering,
 		Count_
 	};
 
@@ -37,7 +39,7 @@ namespace mdrpc {
 	/**
 	 * Human-readable conversions of DiscordState
 	 */ 
-	constexpr std::array<const char*, DiscordState::Count_> discord_states = {{
+	constexpr std::array<const char*, DiscordState::Count_> current_states = {{
 		"Idle",
 		"Paused",
 		"Playing",
@@ -56,6 +58,9 @@ namespace mdrpc {
 		}
 
 
+		/**
+		 * Called in runner thread to initalize Discord
+		 */
 		void DiscordInit() {
 			using namespace std::placeholders;
 			
@@ -71,26 +76,19 @@ namespace mdrpc {
 #endif
 		}
 
+		/**
+		 * Called in runner thread to update state
+		 */
 		void DiscordUpdate() {
 			static DiscordRichPresence rpc;
 			rpc.largeImageKey = discord_large;
 			rpc.largeImageText = "mpv";
 
-			rpc.details = discord_states[discord_state];
+			auto state = Utils::StringToC(GetState());
+			auto song = Utils::StringToC(GetSong());
 
-			std::string details = GetFormat();
-
-			std::vector<char> conv;
-			conv.resize(details.size());
-
-			std::remove_copy_if(details.begin(), details.end(), conv.begin(), [](char c) {
-				return c == '\0';
-			});
-
-			conv.push_back('\0');
-
-
-			rpc.state = conv.data();
+			rpc.details = state.data();
+			rpc.state = song.data();
 
 			Discord_UpdatePresence(&rpc);
 			Discord_RunCallbacks();
@@ -99,16 +97,42 @@ namespace mdrpc {
 #endif
 		}
 
+		/**
+		 * Called when Discord is ready
+		 */
 		void DiscordReady(const DiscordUser* user) {
 			std::cout << "mdrpc2: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
 		}
 
+		/**
+		 * Called when Discord disconnects
+		 */
 		void DiscordDisconnect(int error, const char* reason) {
 			std::cout << "mdrpc2: Discord disconnected (" << error << " \"" << reason << "\"\n";
 		}
 
+		/**
+		 * uh oh system fuck
+		 */
 		void DiscordError(int error, const char* reason) {
 			std::cout << "mdrpc2: Discord error (" << error << " \"" << reason << "\"\n";
+		}
+
+		/**
+		 * Updates the current state.
+		 */
+		void StateUpdate() {
+			property::get_bool(mpvHandle, "pause", [&](bool Value) {
+				if(Value)
+					current_state = DiscordState::Paused;
+				else
+					current_state = DiscordState::Playing;
+			});
+
+			property::get_bool(mpvHandle, "paused-for-cache", [&](bool Value) {
+				if(Value)
+					current_state = DiscordState::Buffering;
+			});
 		}
 
 		/**
@@ -125,7 +149,7 @@ namespace mdrpc {
 					break;
 
 				case MPV_EVENT_FILE_LOADED: {
-					discord_state = DiscordState::Playing;
+					current_state = DiscordState::Playing;
 					cached_metadata.clear();
 					cached_metadata = property::get_node_map_converted(mpvHandle, "metadata");
 					filename = property::get_osd_string_converted(mpvHandle, "filename");
@@ -133,27 +157,72 @@ namespace mdrpc {
 					if(discord_runner.Running())
 						discord_runner.Stop();
 
-					discord_runner.Start(5000, [&]() {
+					if(state_runner.Running())
+						state_runner.Stop();
+
+					discord_runner.Start(1500, [&]() {
 						DiscordUpdate();
 					}, [&]() {
 						// Initalize discord
 						DiscordInit();
 					});
+
+					state_runner.Start(500, [&]() {
+						StateUpdate();
+					});
 				} break;
 				
 				case MPV_EVENT_IDLE: {
-					discord_state = DiscordState::Idle;
+					if(state_runner.Running())
+						state_runner.Stop();
+
+					current_state = DiscordState::Idle;
 				} break;
 
 				case MPV_EVENT_SHUTDOWN: {
 					if(discord_runner.Running())
 						discord_runner.Stop();
+
+					if(state_runner.Running())
+						state_runner.Stop();
+
+					Discord_Shutdown();
 				}
 			}
 		}
 
+		/**
+		 * Returns formatted state.
+		 */
+		std::string GetState() {
+			std::stringstream stream;
+			stream << current_states[current_state] << ' ' << '(';
 
-		std::string GetFormat() {
+			double speed;
+			property::get_double(mpvHandle, "speed", [&](double v) {
+				speed = v;
+			});
+
+			stream << property::get_osd_string_converted(mpvHandle, "time-pos") << '/';
+			stream << property::get_osd_string_converted(mpvHandle, "duration");
+
+			if(speed != 1.0)
+				stream << ' ';
+
+			if(Utils::AddIf(stream, speed, [](double v) { return v == 1.0; })) {
+				stream << 'x';
+			}
+
+			stream << ')';
+
+			return stream.str();
+		}
+
+
+		/**
+		 * Returns formatted song or filename
+		 */
+		std::string GetSong() {
 			constexpr std::array<const char*, 2> artist_keys = {{
 				"artist",
 				"ARTIST"
@@ -197,31 +266,44 @@ namespace mdrpc {
 				title = std::string(title_.begin(), title_.end());
 			}
 
-			std::stringstream ss;
+			std::stringstream stream;
 
 			if(artist.empty() && title.empty())
-				ss << filename;
+				stream << filename;
 			else if(artist.empty())
-				ss << title;
+				stream << title;
 			else
-				ss << artist << " - " << title;
+				stream << artist << " - " << title;
 
-			// TODO: add play line to stringstream
-
-			return ss.str();
+			return stream.str();
 		}
 
-
+	private:
 		/**
 		 * Cached file metadata for the file that is currently playing
 		 */ 
 		std::map<std::string, mpv_node> cached_metadata;
 
+
+		/**
+		 * Cached filename
+		 */
 		std::string filename;
 		
-		mdrpc::PerIntervalRunner discord_runner;
+		/**
+		 * Runner for updating Rich Presence
+		 */
+		Utils::PerIntervalRunner discord_runner;
 
-		DiscordState discord_state;
+		/**
+		 * Runner for updating state.
+		 */
+		Utils::PerIntervalRunner state_runner;
+
+		/**
+		 * Current state.
+		 */
+		DiscordState current_state;
 	};
 
 }

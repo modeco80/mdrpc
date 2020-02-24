@@ -9,7 +9,7 @@
 // the interval function with arguments
 //
 
-namespace mdrpc {
+namespace Utils {
 
     /**
      * Runs code at an specified interval in a new thread.
@@ -78,9 +78,7 @@ namespace mdrpc {
             if(!started)
                 return;
             
-            stop_mutex.lock();
             stop = true;
-            stop_mutex.unlock();
         }
 
 		/**
@@ -103,7 +101,6 @@ namespace mdrpc {
             started = true;
 
             while(true) {
-                std::lock_guard<std::mutex> lock(stop_mutex);
                 if(stop)
                     break;
 
@@ -128,7 +125,6 @@ namespace mdrpc {
             initFun();
 
             while(true) {
-                std::lock_guard<std::mutex> lock(stop_mutex);
                 if(stop)
                     break;
 
@@ -151,7 +147,6 @@ namespace mdrpc {
             started = true;
 
             while(true) {
-                std::lock_guard<std::mutex> lock(stop_mutex);
                 if(stop)
                     break;
 
@@ -173,11 +168,6 @@ namespace mdrpc {
          * Whether or not the runner thread is active.
          */ 
         bool started = false;
-
-        /**
-         * Lock for the `stop` variable
-         */
-        std::mutex stop_mutex;
 
         /**
          * Indicates that the runner function should stop and kill the thread,

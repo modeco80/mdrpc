@@ -240,8 +240,9 @@ namespace mdrpc {
 			std::string str;
 
 			get_string_osd(handle, property_name, [&](char* returned) {
-				str.resize(strlen(returned));
-				for(int i = 0; i < strlen(returned); ++i)
+				auto len = strlen(returned);
+				str.resize(len);
+				for(int i = 0; i < len; ++i)
 					str.push_back(returned[i]);
 			});
 
@@ -296,42 +297,20 @@ namespace mdrpc {
 		}
 
 		/**
-		 * Convert a existing string node to a std::string
+		 * Convert a existing string node to a std::string.
+		 * \param[in] node Node to convert
 		 */
 		inline std::string convert_node_string(mpv_node node) {
-			std::string s;
 			auto size = strlen(node.u.string);
+			std::string s;
 			s.resize(size);
 
-	
-			// slow but i'll fix whenever it becomes a problem
-			for(int i = 0; i < size; ++i) {
+			for(int i = 0; i < size; ++i)
 				if(node.u.string[i] != '\0')
 					s.push_back(node.u.string[i]);
-			}
 
 			return s;
 		}
-
-		// TODO
-
-		/**
-		 * Watch a property.
-		 * Returns the ID (a random number) for use in unwatch().
-		 */
-		inline std::uint64_t watch(SafeMpvHandle& handle, const std::string& property_name) {
-			std::uint64_t id = (std::uint64_t)rand();
-			
-			return id;
-		}
-
-
-		/**
-		 * Un-watch a property.
-		 */
-		inline void unwatch(SafeMpvHandle& handle, std::uint64_t id) {
-		}
-
 		
 	}
 
