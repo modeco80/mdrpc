@@ -1,3 +1,4 @@
+#include "SymHide.hpp"
 #include "mpv_plugin.hpp"
 #include "mpv_discord.hpp"
 
@@ -8,7 +9,6 @@
 #include <windows.h>
 #endif
 
-
 /**
  * Static heap allocated plugin
  */
@@ -16,7 +16,7 @@ static mdrpc::IMpvPlugin* plugin_iface = nullptr;
 
 extern "C" {
 
-	int mpv_open_cplugin(mpv_handle* handle) {
+	EXPORT_SYM int mpv_open_cplugin(mpv_handle* handle) {
 		plugin_iface = new mdrpc::DiscordPlugin(handle);
 
 		while(true) {
@@ -35,19 +35,19 @@ extern "C" {
 		return 0;
 	}
 
+}
+
 #ifdef _WIN32
 // Null DllMain so linking doesn't fall apart on Windows
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
-	switch (nReason) {
+	switch (reason) {
 		case DLL_PROCESS_ATTACH:
-    	  DisableThreadLibraryCalls(hinst);
+			DisableThreadLibraryCalls(hinst);
 		break;
 
-    	case DLL_PROCESS_DETACH:
+    	default:
 		break;
 	}
 	return TRUE;
 }
 #endif
-
-}

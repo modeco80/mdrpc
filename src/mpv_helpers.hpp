@@ -11,7 +11,7 @@
 // mpv types
 #include <mpv/client.h>
 
-namespace mdrpc {
+namespace mdrpc LOCAL_SYM {
 
 	/**
 	 * Safe handle construct for handles to MPV.

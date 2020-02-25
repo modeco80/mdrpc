@@ -1,9 +1,9 @@
 #include <discord_rpc.h>
 #include <sstream>
-#include "PerIntervalRunner.hpp"
 #include "Utils.hpp"
+#include "PerIntervalRunner.hpp"
 
-namespace mdrpc {
+namespace mdrpc LOCAL_SYM {
 
 	/**
 	 * Discord state enumeration

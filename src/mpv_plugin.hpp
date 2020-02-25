@@ -5,7 +5,7 @@
 
 #include "mpv_helpers.hpp"
 
-namespace mdrpc {
+namespace mdrpc LOCAL_SYM {
 
 	/**
 	 * Interface for plugins to follow

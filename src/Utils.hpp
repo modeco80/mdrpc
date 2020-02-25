@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-namespace Utils {
+namespace Utils LOCAL_SYM {
 
 		/**
 		 * Function template that writes value into stream if it the given expression is false.

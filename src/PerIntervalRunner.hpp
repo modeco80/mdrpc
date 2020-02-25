@@ -9,7 +9,7 @@
 // the interval function with arguments
 //
 
-namespace Utils {
+namespace Utils LOCAL_SYM {
 
     /**
      * Runs code at an specified interval in a new thread.
@@ -97,7 +97,7 @@ namespace Utils {
          * \param[in] fun Function to call
          */
         template<class F>
-        void Runner(std::uint16_t interval, F fun) {
+        LOCAL_SYM void Runner(std::uint16_t interval, F fun) {
             started = true;
 
             while(true) {
@@ -119,7 +119,7 @@ namespace Utils {
          * \param[in] initFun run on thread init
          */
         template<class F, class FInit>
-        void Runner(std::uint16_t interval, F fun, FInit initFun) {
+      	LOCAL_SYM void Runner(std::uint16_t interval, F fun, FInit initFun) {
             started = true;
 
             initFun();
@@ -143,7 +143,7 @@ namespace Utils {
          * \param[in] fun Function to call
          */
         template<class F, class ...Args>
-        void Runner(std::uint16_t interval, F fun, Args... args) {
+        LOCAL_SYM void Runner(std::uint16_t interval, F fun, Args... args) {
             started = true;
 
             while(true) {
