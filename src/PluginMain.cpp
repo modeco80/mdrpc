@@ -1,6 +1,5 @@
 #include "SymHide.hpp"
-#include "mpv_plugin.hpp"
-#include "mpv_discord.hpp"
+#include "DiscordPlugin.hpp"
 
 #ifdef _WIN32
 // We do not use Windows APIs in the plugin

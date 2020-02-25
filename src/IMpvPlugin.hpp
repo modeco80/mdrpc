@@ -1,9 +1,10 @@
+#pragma once
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
-
-#include "mpv_helpers.hpp"
+#include "PropertyHelpers.hpp"
 
 namespace mdrpc LOCAL_SYM {
 

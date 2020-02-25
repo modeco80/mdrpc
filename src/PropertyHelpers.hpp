@@ -1,4 +1,5 @@
 // === Helper utility functions for better/modern C++ interaction with MPV ===
+#pragma once
 
 #include <cstdint>
 #include <cstring>
@@ -29,7 +30,7 @@ namespace mdrpc LOCAL_SYM {
 		/**
 		 * Gets the underlying handle to mpv.
 		 */ 
-		mpv_handle* get() {
+		inline mpv_handle* get() {
 			if(h) 
 				return h; 
 			throw std::runtime_error("attempt to get handle when it's null");
@@ -38,12 +39,13 @@ namespace mdrpc LOCAL_SYM {
 		/**
 		 * Cast operator. Returns the result of SafeMpvHandle::get().
 		 */
-		operator mpv_handle*() { return get(); }
+		inline operator mpv_handle*() { 
+			return get(); 
+		}
 
 	private:
 		mpv_handle* h;
 	};
-
 
 	namespace property {
 		
