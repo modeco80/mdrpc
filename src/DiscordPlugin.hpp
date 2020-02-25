@@ -36,18 +36,14 @@ namespace mdrpc LOCAL_SYM {
 		 * Called in runner thread to initalize Discord
 		 */
 		void DiscordInit();
+
 		/**
 		 * Called in runner thread to update state
 		 */
 		void DiscordUpdate();
 
-		/**
-		 * Called when Discord is ready
-		 */
+
 		void DiscordReady(const DiscordUser* user);
-		/**
-		 * Called when Discord disconnects
-		 */
 		void DiscordDisconnect(int error, const char* reason);
 
 		/**
@@ -75,24 +71,9 @@ namespace mdrpc LOCAL_SYM {
 		 */ 
 		std::map<std::string, mpv_node> cached_metadata;
 
-		/**
-		 * Cached filename
-		 */
 		std::string filename;
-		
-		/**
-		 * Runner for updating Rich Presence
-		 */
 		Utils::PerIntervalRunner discord_runner;
-
-		/**
-		 * Runner for updating state.
-		 */
 		Utils::PerIntervalRunner state_runner;
-
-		/**
-		 * Current state.
-		 */
 		DiscordState current_state;
 	};
 

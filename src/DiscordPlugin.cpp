@@ -34,7 +34,6 @@ namespace mdrpc LOCAL_SYM {
 		"Buffering Remote Content"
 	}};
 
-
 	DiscordPlugin::DiscordPlugin(mpv_handle* handle) 
 		: IMpvPlugin(handle) {
 	}
