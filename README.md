@@ -1,6 +1,6 @@
-## mdrpc2
+## mdrpc
 
-mdrpc is a (Work-In-Progress):tm: native Discord Rich Pressence MPV plugin.
+mdrpc is a native Discord Rich Pressence MPV plugin written in C++, licensed under the MIT License.
 
 ## Building
 
