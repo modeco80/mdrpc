@@ -65,7 +65,6 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		std::string GetState();
 
-
 		/**
 		 * Returns formatted song or filename
 		 */

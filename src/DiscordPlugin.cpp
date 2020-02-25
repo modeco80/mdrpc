@@ -44,88 +44,7 @@ namespace mdrpc LOCAL_SYM {
 			cached_metadata.clear();
 	}
 
-	/**
-	 * Called in runner thread to initalize Discord
-	 */
-	void DiscordPlugin::DiscordInit() {
-		using namespace std::placeholders;
-		
-		DiscordEventHandlers handlers;
-		memset(&handlers, 0, sizeof(DiscordEventHandlers));
-		handlers.ready = std::bind(&DiscordPlugin::DiscordReady, this, _1);
-		handlers.disconnected = std::bind(&DiscordPlugin::DiscordDisconnect, this, _1, _2);
-		handlers.errored = std::bind(&DiscordPlugin::DiscordError, this, _1, _2);
 
-		Discord_Initialize(discord_appid, &handlers, 1, NULL);
-#ifdef DISCORD_DISABLE_IO_THREAD
-		Discord_UpdateConnection();
-#endif
-	}
-
-	/**
-	 * Called in runner thread to update state
-	 */
-	void DiscordPlugin::DiscordUpdate() {
-		static DiscordRichPresence rpc;
-		rpc.largeImageKey = discord_large;
-		rpc.largeImageText = "mpv";
-
-		auto state = Utils::StringToC(GetState());
-		auto song = Utils::StringToC(GetSong());
-
-		rpc.details = state.data();
-		rpc.state = song.data();
-
-		Discord_UpdatePresence(&rpc);
-		Discord_RunCallbacks();
-#ifdef DISCORD_DISABLE_IO_THREAD
-		Discord_UpdateConnection();
-#endif
-	}
-
-	/**
-	 * Called when Discord is ready
-	 */
-	void DiscordPlugin::DiscordReady(const DiscordUser* user) {
-		std::cout << "mdrpc2: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
-	}
-
-	/**
-	 * Called when Discord disconnects
-	 */
-	void DiscordPlugin::DiscordDisconnect(int error, const char* reason) {
-		std::cout << "mdrpc2: Discord disconnected (" << error << " \"" << reason << "\"\n";
-	}
-
-	/**
-	 * uh oh system fuck
-	 */
-	void DiscordPlugin::DiscordError(int error, const char* reason) {
-		std::cout << "mdrpc2: Discord error (" << error << " \"" << reason << "\"\n";
-	}
-
-	/**
-	 * Updates the current state.
-	 */
-	void DiscordPlugin::StateUpdate() {
-		property::get_bool(mpvHandle, "pause", [&](bool Value) {
-			if(Value)
-				current_state = DiscordState::Paused;
-			else
-				current_state = DiscordState::Playing;
-		});
-
-		property::get_bool(mpvHandle, "paused-for-cache", [&](bool Value) {
-			if(Value)
-				current_state = DiscordState::Buffering;
-		});
-	}
-
-	/**
-	 * Processes events as they are recieved from MPV.
-	 * 
-	 * \param[in] ev Native MPV event.
-	 */
 	void DiscordPlugin::ProcessEvent(mpv_event* ev) {
 		if(!ev)
 			return;
@@ -177,9 +96,65 @@ namespace mdrpc LOCAL_SYM {
 		}
 	}
 
-	/**
-	 * Returns formatted state.
-	 */
+	void DiscordPlugin::DiscordInit() {
+		using namespace std::placeholders;
+		
+		DiscordEventHandlers handlers;
+		memset(&handlers, 0, sizeof(DiscordEventHandlers));
+		handlers.ready = std::bind(&DiscordPlugin::DiscordReady, this, _1);
+		handlers.disconnected = std::bind(&DiscordPlugin::DiscordDisconnect, this, _1, _2);
+		handlers.errored = std::bind(&DiscordPlugin::DiscordError, this, _1, _2);
+
+		Discord_Initialize(discord_appid, &handlers, 1, NULL);
+#ifdef DISCORD_DISABLE_IO_THREAD
+		Discord_UpdateConnection();
+#endif
+	}
+
+	void DiscordPlugin::DiscordUpdate() {
+		static DiscordRichPresence rpc;
+		rpc.largeImageKey = discord_large;
+		rpc.largeImageText = "mpv";
+
+		auto state = Utils::StringToC(GetState());
+		auto song = Utils::StringToC(GetSong());
+
+		rpc.details = state.data();
+		rpc.state = song.data();
+
+		Discord_UpdatePresence(&rpc);
+		Discord_RunCallbacks();
+#ifdef DISCORD_DISABLE_IO_THREAD
+		Discord_UpdateConnection();
+#endif
+	}
+
+	void DiscordPlugin::DiscordReady(const DiscordUser* user) {
+		std::cout << "mdrpc2: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
+	}
+
+	void DiscordPlugin::DiscordDisconnect(int error, const char* reason) {
+		std::cout << "mdrpc2: Discord disconnected (" << error << " \"" << reason << "\"\n";
+	}
+
+	void DiscordPlugin::DiscordError(int error, const char* reason) {
+		std::cout << "mdrpc2: Discord error (" << error << " \"" << reason << "\"\n";
+	}
+
+	void DiscordPlugin::StateUpdate() {
+		property::get_bool(mpvHandle, "pause", [&](bool Value) {
+			if(Value)
+				current_state = DiscordState::Paused;
+			else
+				current_state = DiscordState::Playing;
+		});
+
+		property::get_bool(mpvHandle, "paused-for-cache", [&](bool Value) {
+			if(Value)
+				current_state = DiscordState::Buffering;
+		});
+	}
+
 	std::string DiscordPlugin::GetState() {
 		std::stringstream stream;
 		stream << current_states[current_state] << ' ' << '(';
@@ -204,10 +179,6 @@ namespace mdrpc LOCAL_SYM {
 		return stream.str();
 	}
 
-
-	/**
-	 * Returns formatted song or filename
-	 */
 	std::string DiscordPlugin::GetSong() {
 		constexpr std::array<const char*, 2> artist_keys = {{
 			"artist",
