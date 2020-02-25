@@ -32,16 +32,18 @@ namespace Utils {
 		 */
 		template<typename String>
 		inline std::vector<typename String::value_type> StringToC(const String& str) {
-			std::vector<char> conv;
+			typedef typename String::value_type char_type;
+
+			std::vector<char_type> conv;
 			conv.resize(str.length() + 1);
 
 			// filtration because mpv injects random NULs
-			std::remove_copy_if(str.begin(), str.end(), conv.begin(), [](typename String::value_type c) {
-				return c == '\0';
+			std::remove_copy_if(str.begin(), str.end(), conv.begin(), [](char_type c) {
+				return c == (char_type)0;
 			});
 
 			// put in a NUL at proper place
-			conv.push_back('\0');
+			conv.push_back((char_type)0);
 			return conv;
 		}
 
