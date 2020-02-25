@@ -1,6 +1,8 @@
 #include "SymHide.hpp"
 #include "DiscordPlugin.hpp"
 
+#include "Version.hpp"
+
 #ifdef _WIN32
 // We do not use Windows APIs in the plugin
 // but we need a few things for the DllMain
@@ -16,6 +18,7 @@ static mdrpc::IMpvPlugin* plugin_iface = nullptr;
 extern "C" {
 
 	EXPORT_SYM int mpv_open_cplugin(mpv_handle* handle) {
+		std::cout << "mdrpc version " << mdrpc::Version::tag << " startup\n";
 		plugin_iface = new mdrpc::DiscordPlugin(handle);
 
 		while(true) {

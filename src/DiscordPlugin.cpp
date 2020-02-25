@@ -129,15 +129,15 @@ namespace mdrpc LOCAL_SYM {
 	}
 
 	void DiscordPlugin::DiscordReady(const DiscordUser* user) {
-		std::cout << "mdrpc2: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
+		std::cout << "mdrpc: Discord connected (" << user->username << "#" << user->discriminator << ")\n";
 	}
 
 	void DiscordPlugin::DiscordDisconnect(int error, const char* reason) {
-		std::cout << "mdrpc2: Discord disconnected (" << error << " \"" << reason << "\"\n";
+		std::cout << "mdrpc: Discord disconnected (" << error << " \"" << reason << "\"\n";
 	}
 
 	void DiscordPlugin::DiscordError(int error, const char* reason) {
-		std::cout << "mdrpc2: Discord error (" << error << " \"" << reason << "\"\n";
+		std::cout << "mdrpc: Discord error (" << error << " \"" << reason << "\"\n";
 	}
 
 	void DiscordPlugin::StateUpdate() {
