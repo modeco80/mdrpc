@@ -7,7 +7,6 @@ namespace Utils {
 		
 		/**
 		 * Gets the instance. Allocates instance if currently null
-		 *
 		 */
 		template<class... Args>
 		T& Get(Args... args) {
