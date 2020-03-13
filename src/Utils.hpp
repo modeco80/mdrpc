@@ -2,7 +2,11 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef INTEST
+namespace Utils {
+#else
 namespace Utils LOCAL_SYM {
+#endif
 
 		/**
 		 * Function template that writes value into stream if it the given expression is false.
@@ -36,7 +40,7 @@ namespace Utils LOCAL_SYM {
 			typedef typename String::value_type char_type;
 
 			std::vector<char_type> conv;
-			conv.resize(str.length() + 1);
+			conv.resize(str.length());
 
 			// filtration because mpv injects random NULs
 			std::remove_copy_if(str.begin(), str.end(), conv.begin(), [](char_type c) {

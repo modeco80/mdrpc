@@ -14,9 +14,9 @@ namespace Utils LOCAL_SYM {
     /**
      * Runs code at an specified interval in a new thread.
      */
-    struct PerIntervalRunner {
+    struct IntervalRunner {
 
-        ~PerIntervalRunner() {
+        ~IntervalRunner() {
             if(runner_thread.get() != nullptr) {
                 if(runner_thread->joinable())
                     runner_thread->join();
@@ -36,7 +36,7 @@ namespace Utils LOCAL_SYM {
             if(runner_thread.get() != nullptr || started)
                 Stop();
 
-            runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F>, this, interval, fun)));
+            runner_thread.reset(new std::thread(std::bind(&IntervalRunner::Runner<F>, this, interval, fun)));
         }
 
         /**
@@ -51,7 +51,7 @@ namespace Utils LOCAL_SYM {
             if(runner_thread.get() != nullptr || started)
                 Stop();
 
-            runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, FInit>, this, interval, fun, initFun)));
+            runner_thread.reset(new std::thread(std::bind(&IntervalRunner::Runner<F, FInit>, this, interval, fun, initFun)));
         }
 
 #ifdef PIR_NOT_USED_BY_MDRPC
@@ -67,7 +67,7 @@ namespace Utils LOCAL_SYM {
             if(runner_thread.get() != nullptr || started)
                 Stop();
                 
-            runner_thread.reset(new std::thread(std::bind(&PerIntervalRunner::Runner<F, Args...>, this, interval, fun, std::forward<Args...>(args...))));
+            runner_thread.reset(new std::thread(std::bind(&IntervalRunner::Runner<F, Args...>, this, interval, fun, std::forward<Args...>(args...))));
         }
 #endif
 

@@ -1,5 +1,6 @@
 #include "SymHide.hpp"
 #include "DiscordPlugin.hpp"
+#include "Singleton.hpp"
 
 #include "Version.hpp"
 
@@ -10,30 +11,28 @@
 #include <windows.h>
 #endif
 
-/**
- * Static heap allocated plugin
- */
-static mdrpc::IMpvPlugin* plugin_iface = nullptr;
+Utils::Singleton<mdrpc::DiscordPlugin> singleton;
 
 extern "C" {
 
 	EXPORT_SYM int mpv_open_cplugin(mpv_handle* handle) {
-		std::cout << "mdrpc version " << mdrpc::Version::tag << " startup\n";
-		plugin_iface = new mdrpc::DiscordPlugin(handle);
+		auto instance = singleton.Get(handle);
 
+		std::cout << "mdrpc version " << mdrpc::Version::tag << "!!\n";
 		while(true) {
-			mpv_event* event = mpv_wait_event(plugin_iface->mpvHandle.get(), -1);
+			auto handle = instance.mpvHandle.get();
+			mpv_event* event = mpv_wait_event(handle, -1);
 			if(event->event_id == MPV_EVENT_SHUTDOWN) {
 				// allow processing shutdown events so we can (cleanly)
 				// stop what we're doing
-				plugin_iface->ProcessEvent(event);
+				instance.ProcessEvent(event);
 				break;
 			}
-			plugin_iface->ProcessEvent(event);
+			instance.ProcessEvent(event);
 		}
 
 		// plugin EOL
-		delete plugin_iface;
+		singleton.Destroy();
 		return 0;
 	}
 
