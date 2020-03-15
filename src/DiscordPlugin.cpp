@@ -35,7 +35,7 @@ namespace mdrpc LOCAL_SYM {
 	}};
 
 	DiscordPlugin::DiscordPlugin(mpv_handle* handle) {
-		mpvHandle = ModernMPV::SafeMpvHandle(handle);
+		mpvHandle = ModernMPV::SafeHandle(handle);
 	}
 
 	DiscordPlugin::~DiscordPlugin() {

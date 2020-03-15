@@ -35,7 +35,7 @@ namespace mdrpc LOCAL_SYM {
 		/**
 		 * Handle to mpv.
 		 */
-		ModernMPV::SafeMpvHandle mpvHandle;
+		ModernMPV::SafeHandle mpvHandle;
 
 	private:
 

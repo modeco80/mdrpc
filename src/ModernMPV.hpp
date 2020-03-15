@@ -20,13 +20,13 @@ namespace ModernMPV {
 	 * Safe handle construct for handles to MPV.
 	 * Will throw exception if the handle is null
 	 */
-	struct SafeMpvHandle {
+	struct SafeHandle {
 
-		SafeMpvHandle() 
+		SafeHandle() 
 			: h(nullptr) {
 		}
 	
-		SafeMpvHandle(mpv_handle* handle) 
+		SafeHandle(mpv_handle* handle) 
 			: h(handle) {
 		}
 
@@ -37,11 +37,11 @@ namespace ModernMPV {
 			if(h) 
 				return h;
 
-			throw std::runtime_error("SafeMpvHandle::get() would return `nullptr` in this case");
+			throw std::runtime_error("SafeHandle::get() would return `nullptr` in this case");
 		}
 
 		/**
-		 * Cast operator. Returns the result of SafeMpvHandle::get().
+		 * Cast operator. Returns the result of SafeHandle::get().
 		 */
 		inline operator mpv_handle*() { 
 			return get(); 
@@ -68,7 +68,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_bool(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_bool(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(int, MPV_FORMAT_FLAG);
 			callback(value);
 		}
@@ -81,7 +81,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_int64(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_int64(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(std::int64_t, MPV_FORMAT_INT64);
 			callback(value);
 		}
@@ -94,7 +94,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_double(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_double(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(double, MPV_FORMAT_DOUBLE);
 			callback(value);
 		}
@@ -110,7 +110,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_string_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_string_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(char*, MPV_FORMAT_STRING);
 			callback(value);
 
@@ -129,7 +129,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_osd_string_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_osd_string_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			char* value = mpv_get_property_osd_string(handle, property_name.c_str());
 			if(!value)
 				return;
@@ -146,7 +146,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_node(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_node(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format == MPV_FORMAT_NODE_ARRAY || value.format == MPV_FORMAT_NODE_MAP) {
@@ -167,7 +167,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_node_map_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_node_map_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format != MPV_FORMAT_NODE_MAP) {
@@ -188,7 +188,7 @@ namespace ModernMPV {
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_node_array_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		void get_node_array_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
 			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format != MPV_FORMAT_NODE_ARRAY) {
@@ -208,7 +208,7 @@ namespace ModernMPV {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::string get_string(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::string get_string(SafeHandle& handle, const std::string& property_name) {
 			std::string str;
 
 			get_string_raw(handle, property_name, [&](char* returned) {
@@ -229,7 +229,7 @@ namespace ModernMPV {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::string get_osd_string(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::string get_osd_string(SafeHandle& handle, const std::string& property_name) {
 			std::string str;
 
 			get_osd_string_raw(handle, property_name, [&](char* returned) {
@@ -269,7 +269,7 @@ namespace ModernMPV {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::map<std::string, mpv_node> get_node_map(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::map<std::string, mpv_node> get_node_map(SafeHandle& handle, const std::string& property_name) {
 			std::map<std::string, mpv_node> values;
 
 			get_node_map_raw(handle, property_name, [&](mpv_node node) {
@@ -293,7 +293,7 @@ namespace ModernMPV {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::vector<mpv_node> get_node_array(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::vector<mpv_node> get_node_array(SafeHandle& handle, const std::string& property_name) {
 			std::vector<mpv_node> values;
 
 			get_node_array_raw(handle, property_name, [&](mpv_node node) {
