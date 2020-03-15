@@ -2,7 +2,7 @@
 
 #include "Utils.hpp"
 #include "IntervalRunner.hpp"
-#include "PropertyHelpers.hpp"
+#include "ModernMPV.hpp"
 
 #include <discord_rpc.h>
 
@@ -32,7 +32,10 @@ namespace mdrpc LOCAL_SYM {
 		void ProcessEvent(mpv_event* ev);
 
 
-		SafeMpvHandle mpvHandle;
+		/**
+		 * Handle to mpv.
+		 */
+		ModernMPV::SafeMpvHandle mpvHandle;
 
 	private:
 
@@ -44,12 +47,12 @@ namespace mdrpc LOCAL_SYM {
 		/**
 		 * Initalizes Discord RPC.
 		 */
-		void DiscordInit();
+		void RpcThreadInit();
 
 		/**
 		 * Creates and sends state to Discord.
 		 */
-		void DiscordUpdate();
+		void RpcThreadInterval();
 
 
 		/**
@@ -70,9 +73,9 @@ namespace mdrpc LOCAL_SYM {
 		/** @} */
 
 		/**
-		 * Updates the current state.
+		 * Updates the current player state.
 		 */
-		void StateUpdate();
+		void StateThreadInterval();
 
 		/**
 		 * Returns the current state in a human readable fashion.
@@ -105,7 +108,7 @@ namespace mdrpc LOCAL_SYM {
 		Utils::IntervalRunner state_runner;
 
 		/**
-		 * Current player state
+		 * The current player state.
 		 */
 		PlayerState current_state;
 	};

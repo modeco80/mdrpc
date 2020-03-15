@@ -17,7 +17,7 @@ namespace mdrpc LOCAL_SYM {
 	/**
 	 * Small image key conversions of DiscordState
 	 */ 
-	constexpr std::array<const char*, DiscordState::Count_> discord_keys = {{
+	constexpr std::array<const char*, PlayerState::Count_> discord_keys = {{
 		"mpv-idle",
 		"mpv-paused",
 		"mpv-playing",
@@ -27,7 +27,7 @@ namespace mdrpc LOCAL_SYM {
 	/**
 	 * Human-readable conversions of DiscordState
 	 */ 
-	constexpr std::array<const char*, DiscordState::Count_> current_states = {{
+	constexpr std::array<const char*, PlayerState::Count_> current_states = {{
 		"Idle",
 		"Paused",
 		"Playing",
@@ -35,7 +35,7 @@ namespace mdrpc LOCAL_SYM {
 	}};
 
 	DiscordPlugin::DiscordPlugin(mpv_handle* handle) {
-		mpvHandle = SafeMpvHandle(handle);
+		mpvHandle = ModernMPV::SafeMpvHandle(handle);
 	}
 
 	DiscordPlugin::~DiscordPlugin() {
@@ -53,12 +53,12 @@ namespace mdrpc LOCAL_SYM {
 				break;
 
 			case MPV_EVENT_FILE_LOADED: {
-				current_state = DiscordState::Playing;
+				current_state = PlayerState::Playing;
 				cached_metadata.clear();
 
 				// load in metadata
-				cached_metadata = property::get_node_map_converted(mpvHandle, "metadata");
-				cached_filename = property::get_osd_string_converted(mpvHandle, "filename");
+				cached_metadata = ModernMPV::Properties::get_node_map(mpvHandle, "metadata");
+				cached_filename = ModernMPV::Properties::get_osd_string(mpvHandle, "filename");
 
 				if(discord_runner.Running())
 					discord_runner.Stop();
@@ -67,14 +67,14 @@ namespace mdrpc LOCAL_SYM {
 					state_runner.Stop();
 
 				discord_runner.Start(1500, [&]() {
-					DiscordUpdate();
+					RpcThreadInterval();
 				}, [&]() {
 					// Initalize discord
-					DiscordInit();
+					RpcThreadInit();
 				});
 
 				state_runner.Start(500, [&]() {
-					StateUpdate();
+					StateThreadInterval();
 				});
 			} break;
 				
@@ -82,7 +82,7 @@ namespace mdrpc LOCAL_SYM {
 				if(state_runner.Running())
 					state_runner.Stop();
 
-				current_state = DiscordState::Idle;
+				current_state = PlayerState::Idle;
 			} break;
 
 			case MPV_EVENT_SHUTDOWN: {
@@ -97,7 +97,7 @@ namespace mdrpc LOCAL_SYM {
 		}
 	}
 
-	void DiscordPlugin::DiscordInit() {
+	void DiscordPlugin::RpcThreadInit() {
 		using namespace std::placeholders;
 		
 		DiscordEventHandlers handlers;
@@ -112,7 +112,7 @@ namespace mdrpc LOCAL_SYM {
 #endif
 	}
 
-	void DiscordPlugin::DiscordUpdate() {
+	void DiscordPlugin::RpcThreadInterval() {
 		static DiscordRichPresence rpc;
 		rpc.largeImageKey = discord_large;
 		rpc.largeImageText = "mpv";
@@ -142,17 +142,17 @@ namespace mdrpc LOCAL_SYM {
 		std::cout << "mdrpc: Discord error (" << error << " \"" << reason << "\"\n";
 	}
 
-	void DiscordPlugin::StateUpdate() {
-		property::get_bool(mpvHandle, "pause", [&](bool Value) {
+	void DiscordPlugin::StateThreadInterval() {
+		ModernMPV::Properties::get_bool(mpvHandle, "pause", [&](bool Value) {
 			if(Value)
-				current_state = DiscordState::Paused;
+				current_state = PlayerState::Paused;
 			else
-				current_state = DiscordState::Playing;
+				current_state = PlayerState::Playing;
 		});
 
-		property::get_bool(mpvHandle, "paused-for-cache", [&](bool Value) {
+		ModernMPV::Properties::get_bool(mpvHandle, "paused-for-cache", [&](bool Value) {
 			if(Value)
-				current_state = DiscordState::Buffering;
+				current_state = PlayerState::Buffering;
 		});
 	}
 
@@ -161,12 +161,12 @@ namespace mdrpc LOCAL_SYM {
 		stream << current_states[current_state] << ' ' << '(';
 
 		double speed;
-		property::get_double(mpvHandle, "speed", [&](double v) {
+		ModernMPV::Properties::get_double(mpvHandle, "speed", [&](double v) {
 			speed = v;
 		});
 
-		stream << property::get_osd_string_converted(mpvHandle, "time-pos") << '/';
-		stream << property::get_osd_string_converted(mpvHandle, "duration");
+		stream << ModernMPV::Properties::get_osd_string(mpvHandle, "time-pos") << '/';
+		stream << ModernMPV::Properties::get_osd_string(mpvHandle, "duration");
 
 		if(speed != 1.0)
 			stream << ' ';
@@ -204,7 +204,7 @@ namespace mdrpc LOCAL_SYM {
 			if(cached_metadata.find(key) == cached_metadata.end())
 				continue;
 
-			auto artist_ = property::convert_node_string(cached_metadata[key]);
+			auto artist_ = ModernMPV::Properties::get_node_string(cached_metadata[key]);
 
 			if(artist_.empty())
 				continue;
@@ -216,7 +216,7 @@ namespace mdrpc LOCAL_SYM {
 			if(cached_metadata.find(key) == cached_metadata.end())
 				continue;
 
-			auto title_ = property::convert_node_string(cached_metadata[key]);
+			auto title_ = ModernMPV::Properties::get_node_string(cached_metadata[key]);
 
 			if(title_.empty())
 				continue;

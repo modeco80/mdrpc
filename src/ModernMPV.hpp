@@ -1,4 +1,3 @@
-// === Helper utility functions for better/modern C++ interaction with MPV ===
 #pragma once
 
 #include <cstdint>
@@ -9,16 +8,20 @@
 #include <map>
 #include <vector>
 
-// mpv types
+// mpv types (and enumerations/data structures)
 #include <mpv/client.h>
 
-namespace mdrpc LOCAL_SYM {
+/**
+ * ModernMPV main namespace
+ */
+namespace ModernMPV {
 
 	/**
 	 * Safe handle construct for handles to MPV.
-	 * Will throw exceptions if the handle is somehow null
+	 * Will throw exception if the handle is null
 	 */
 	struct SafeMpvHandle {
+
 		SafeMpvHandle() 
 			: h(nullptr) {
 		}
@@ -28,12 +31,13 @@ namespace mdrpc LOCAL_SYM {
 		}
 
 		/**
-		 * Gets the underlying handle to mpv.
+		 * Gets the underlying handle this object is holding
 		 */ 
 		inline mpv_handle* get() {
 			if(h) 
-				return h; 
-			throw std::runtime_error("attempt to get handle when it's null");
+				return h;
+
+			throw std::runtime_error("SafeMpvHandle::get() would return `nullptr` in this case");
 		}
 
 		/**
@@ -47,8 +51,15 @@ namespace mdrpc LOCAL_SYM {
 		mpv_handle* h;
 	};
 
-	namespace property {
-		
+	namespace Properties {
+	/**
+	 * Macro to generate parts of the function body
+	 * that do not change for the following functions.
+	 */
+	#define MDN_GENERATE_BODY(T, PropertyT) T value; \
+											if(mpv_get_property(handle, property_name.c_str(), PropertyT, &value) < 0) \
+												return;	\
+
 		/**
 		 * Get an bool/flag property.
 		 * 
@@ -58,12 +69,8 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		template<class Functor>
 		inline void get_bool(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			int flag_value;
-
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_FLAG, &flag_value) < 0)
-				return;
-
-			callback(flag_value);
+			MDN_GENERATE_BODY(int, MPV_FORMAT_FLAG);
+			callback(value);
 		}
 
 		/**
@@ -75,11 +82,7 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		template<class Functor>
 		inline void get_int64(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			std::int64_t value;
-
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_INT64, &value) < 0)
-				return;
-
+			MDN_GENERATE_BODY(std::int64_t, MPV_FORMAT_INT64);
 			callback(value);
 		}
 
@@ -92,51 +95,42 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		template<class Functor>
 		inline void get_double(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			double value;
-
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_DOUBLE, &value) < 0)
-				return;
-
+			MDN_GENERATE_BODY(double, MPV_FORMAT_DOUBLE);
 			callback(value);
 		}
 
+		// == Raw / Not Reccomended for Use functions ==
+
 		/**
-		 * Get an string property.
+		 * Get an string property in it's raw form.
+		 * Not reccomended. Use ModernMPV::Properties::get_string() instead.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_string(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			char* value = nullptr;
-
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_STRING, &value) < 0)
-				return;
-
-			// while it's *safe* to assume at this point we have a valid value
-			// (we've passed go and collected 200$), we still check
-			if(!value)
-				return;
-	
+		inline void get_string_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+			MDN_GENERATE_BODY(char*, MPV_FORMAT_STRING);
 			callback(value);
 
 			// We get an allocation from the handle itself,
-			// so we call mpv_free when our callback completes on the allocated memory
+			// so we call mpv_free when our callback completes *on* the allocated memory
+			// This means the pointer will be invalid at this point
 			mpv_free(value);
 		}
 
 		/**
-		 * Get an string property with OSD formatting.
+		 * Get an string property with OSD formatting in its raw form.
+		 * Not reccomended. Use ModernMPV::Properties::get_string_osd() instead.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_string_osd(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+		inline void get_osd_string_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
 			char* value = mpv_get_property_osd_string(handle, property_name.c_str());
-
 			if(!value)
 				return;
 	
@@ -145,7 +139,7 @@ namespace mdrpc LOCAL_SYM {
 		}
 		
 		/**
-		 * Get an singular node property.
+		 * Get a singular node property.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -153,66 +147,60 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		template<class Functor>
 		inline void get_node(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			mpv_node node;
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
-				return;
+			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
-			// Already handled by the below get_node_map and get_node_array functions
-			// (as well as conversion functions)
-			if(node.format == MPV_FORMAT_NODE_ARRAY || node.format == MPV_FORMAT_NODE_MAP) {
-				mpv_free_node_contents(&node);
+			if(value.format == MPV_FORMAT_NODE_ARRAY || value.format == MPV_FORMAT_NODE_MAP) {
+				mpv_free_node_contents(&value);
 				return;
 			}
 
-			callback(node);
-			mpv_free_node_contents(&node);
+			callback(value);
+			mpv_free_node_contents(&value);
 		}
 
 		/**
-		 * Get an node map property.
+		 * Get an node map property in its raw form.
+		 * Not reccomended. Use ModernMPV::Properties::get_node_map() instead.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		inline void get_node_map(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			mpv_node node;
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
-				return;
+		inline void get_node_map_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
-			if(node.format != MPV_FORMAT_NODE_MAP) {
-				mpv_free_node_contents(&node);
+			if(value.format != MPV_FORMAT_NODE_MAP) {
+				mpv_free_node_contents(&value);
 				return;
 			}
 
-			callback(node);
-			mpv_free_node_contents(&node);
+			callback(value);
+			mpv_free_node_contents(&value);
 		}
 
 		/**
-		 * Get an node array property.
+		 * Get an node array property in its raw form.
+		 * Not reccomended. Use ModernMPV::Properties::get_node_array() instead.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 * \param[out] callback Callback function
 		 */
 		template<class Functor>
-		void get_node_array(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
-			mpv_node node;
-			if(mpv_get_property(handle, property_name.c_str(), MPV_FORMAT_NODE, &node) < 0)
-				return;
+		void get_node_array_raw(SafeMpvHandle& handle, const std::string& property_name, Functor callback) {
+			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
 			
-			if(node.format != MPV_FORMAT_NODE_ARRAY) {
-				mpv_free_node_contents(&node);
+			if(value.format != MPV_FORMAT_NODE_ARRAY) {
+				mpv_free_node_contents(&value);
 				return;
 			}
 
-			callback(node);
-			mpv_free_node_contents(&node);
+			callback(value);
+			mpv_free_node_contents(&value);
 		}
 
-		// === Conversions ===
+		// === Conversions for Unsafe Functions ===
 
 		/**
 		 * Get an string property converted to a std::string.
@@ -220,13 +208,16 @@ namespace mdrpc LOCAL_SYM {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::unique_ptr<std::string> get_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
-			std::unique_ptr<std::string> str(new std::string());
+		inline std::string get_string(SafeMpvHandle& handle, const std::string& property_name) {
+			std::string str;
 
-			get_string(handle, property_name, [&](char* returned) {
-				str->resize(strlen(returned));
-				for(int i = 0; i < strlen(returned); ++i)
-					str->push_back(returned[i]);
+			get_string_raw(handle, property_name, [&](char* returned) {
+				auto len = strlen(returned);
+				str.resize(len);
+
+				for(int i = 0; i < len; ++i)
+					if(returned[i] != '\0')
+						str.push_back(returned[i]);
 			});
 
 			return str;
@@ -238,15 +229,36 @@ namespace mdrpc LOCAL_SYM {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::string get_osd_string_converted(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::string get_osd_string(SafeMpvHandle& handle, const std::string& property_name) {
 			std::string str;
 
-			get_string_osd(handle, property_name, [&](char* returned) {
+			get_osd_string_raw(handle, property_name, [&](char* returned) {
 				auto len = strlen(returned);
 				str.resize(len);
 				for(int i = 0; i < len; ++i)
-					str.push_back(returned[i]);
+					if(returned[i] != '\0')
+						str.push_back(returned[i]);
 			});
+
+			return str;
+		}
+
+		/**
+		 * Convert a existing string node to a std::string.
+		 * \param[in] node Node to convert
+		 */
+		inline std::string get_node_string(mpv_node node) {
+			std::string str;
+
+			if(node.u.string == nullptr)
+				return str; 
+
+			auto size = strlen(node.u.string);
+			str.resize(size);
+
+			for(int i = 0; i < size; ++i)
+				if(node.u.string[i] != '\0')
+					str.push_back(node.u.string[i]);
 
 			return str;
 		}
@@ -257,10 +269,10 @@ namespace mdrpc LOCAL_SYM {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::map<std::string, mpv_node> get_node_map_converted(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::map<std::string, mpv_node> get_node_map(SafeMpvHandle& handle, const std::string& property_name) {
 			std::map<std::string, mpv_node> values;
 
-			get_node_map(handle, property_name, [&](mpv_node node) {
+			get_node_map_raw(handle, property_name, [&](mpv_node node) {
 					if(node.u.list->num == 0)
 						return;
 
@@ -281,10 +293,10 @@ namespace mdrpc LOCAL_SYM {
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
 		 */
-		inline std::vector<mpv_node> get_node_array_converted(SafeMpvHandle& handle, const std::string& property_name) {
+		inline std::vector<mpv_node> get_node_array(SafeMpvHandle& handle, const std::string& property_name) {
 			std::vector<mpv_node> values;
 
-			get_node_array(handle, property_name, [&](mpv_node node) {
+			get_node_array_raw(handle, property_name, [&](mpv_node node) {
 					if(node.u.list->num == 0)
 						return;
 
@@ -298,22 +310,6 @@ namespace mdrpc LOCAL_SYM {
 			return values;
 		}
 
-		/**
-		 * Convert a existing string node to a std::string.
-		 * \param[in] node Node to convert
-		 */
-		inline std::string convert_node_string(mpv_node node) {
-			auto size = strlen(node.u.string);
-			std::string s;
-			s.resize(size);
-
-			for(int i = 0; i < size; ++i)
-				if(node.u.string[i] != '\0')
-					s.push_back(node.u.string[i]);
-
-			return s;
-		}
-		
 	}
-
+#undef MDN_GENERATE_BODY
 }
