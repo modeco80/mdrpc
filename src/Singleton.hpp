@@ -4,7 +4,11 @@ namespace Utils {
 	
 	template<typename T>
 	struct Singleton {
-		
+
+		~Singleton() {
+			Destroy();
+		}		
+
 		/**
 		 * Gets the instance. Allocates instance if currently null
 		 */

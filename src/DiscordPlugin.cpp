@@ -34,8 +34,8 @@ namespace mdrpc LOCAL_SYM {
 		"Buffering Remote Content"
 	}};
 
-	DiscordPlugin::DiscordPlugin(mpv_handle* handle) 
-		: IMpvPlugin(handle) {
+	DiscordPlugin::DiscordPlugin(mpv_handle* handle) {
+		mpvHandle = SafeMpvHandle(handle);
 	}
 
 	DiscordPlugin::~DiscordPlugin() {
@@ -55,8 +55,10 @@ namespace mdrpc LOCAL_SYM {
 			case MPV_EVENT_FILE_LOADED: {
 				current_state = DiscordState::Playing;
 				cached_metadata.clear();
+
+				// load in metadata
 				cached_metadata = property::get_node_map_converted(mpvHandle, "metadata");
-				filename = property::get_osd_string_converted(mpvHandle, "filename");
+				cached_filename = property::get_osd_string_converted(mpvHandle, "filename");
 
 				if(discord_runner.Running())
 					discord_runner.Stop();
@@ -225,7 +227,7 @@ namespace mdrpc LOCAL_SYM {
 		std::stringstream stream;
 
 		if(artist.empty() && title.empty())
-			stream << filename;
+			stream << cached_filename;
 		else if(artist.empty())
 			stream << title;
 		else

@@ -2,15 +2,16 @@
 
 #include "Utils.hpp"
 #include "IntervalRunner.hpp"
-#include "IMpvPlugin.hpp"
+#include "PropertyHelpers.hpp"
+
 #include <discord_rpc.h>
 
 namespace mdrpc LOCAL_SYM {
 
 	/**
-	 * Discord state enumeration
+	 * Player state enumeration
 	 */
-	enum DiscordState : std::uint8_t {
+	enum PlayerState : std::uint8_t {
 		Idle,
 		Paused,
 		Playing,
@@ -18,7 +19,7 @@ namespace mdrpc LOCAL_SYM {
 		Count_
 	};
 
-	struct DiscordPlugin : public IMpvPlugin {
+	struct DiscordPlugin {
 
 		DiscordPlugin(mpv_handle* handle);
 		~DiscordPlugin();
@@ -30,18 +31,43 @@ namespace mdrpc LOCAL_SYM {
 		 */
 		void ProcessEvent(mpv_event* ev);
 
+
+		SafeMpvHandle mpvHandle;
+
 	private:
 
+		/**
+		 * \defgroup Discord functions
+		 * @{
+		 */
+
+		/**
+		 * Initalizes Discord RPC.
+		 */
 		void DiscordInit();
+
+		/**
+		 * Creates and sends state to Discord.
+		 */
 		void DiscordUpdate();
 
+
+		/**
+		 * Callback for when Discord is ready.
+		 */
 		void DiscordReady(const DiscordUser* user);
+
+		/**
+		 * Callback for when Discord disconnects.
+		 */
 		void DiscordDisconnect(int error, const char* reason);
 
 		/**
 		 * uh oh system fuck
 		 */
 		void DiscordError(int error, const char* reason);
+	
+		/** @} */
 
 		/**
 		 * Updates the current state.
@@ -49,24 +75,39 @@ namespace mdrpc LOCAL_SYM {
 		void StateUpdate();
 
 		/**
-		 * Returns formatted state.
+		 * Returns the current state in a human readable fashion.
 		 */
 		std::string GetState();
 
 		/**
-		 * Returns formatted song metadata or filename.
+		 * Returns the formatted song metadata (or filename if metadata does not exist).
 		 */
 		std::string GetSong();
 
 		/**
-		 * Cached file metadata for file that is currently playing
+		 * Cached file metadata for file that is currently playing.
 		 */ 
 		std::map<std::string, mpv_node> cached_metadata;
 
-		std::string filename;
+		/**
+		 * Cached filename.
+		 */
+		std::string cached_filename;
+
+		/**
+		 * Interval runner for Discord.
+		 */
 		Utils::IntervalRunner discord_runner;
+
+		/**
+		 * Interval runner for updating states.
+		 */
 		Utils::IntervalRunner state_runner;
-		DiscordState current_state;
+
+		/**
+		 * Current player state
+		 */
+		PlayerState current_state;
 	};
 
 }

@@ -1,7 +1,6 @@
 #include "SymHide.hpp"
 #include "DiscordPlugin.hpp"
 #include "Singleton.hpp"
-
 #include "Version.hpp"
 
 #ifdef _WIN32
@@ -11,28 +10,28 @@
 #include <windows.h>
 #endif
 
-Utils::Singleton<mdrpc::DiscordPlugin> singleton;
-
 extern "C" {
 
 	EXPORT_SYM int mpv_open_cplugin(mpv_handle* handle) {
-		auto instance = singleton.Get(handle);
+		Utils::Singleton<mdrpc::DiscordPlugin> plugin_singleton;
+
+		auto plugin = plugin_singleton.Get(handle);
 
 		std::cout << "mdrpc version " << mdrpc::Version::tag << "!!\n";
 		while(true) {
-			auto handle = instance.mpvHandle.get();
+			auto handle = plugin.mpvHandle.get();
 			mpv_event* event = mpv_wait_event(handle, -1);
+
 			if(event->event_id == MPV_EVENT_SHUTDOWN) {
 				// allow processing shutdown events so we can (cleanly)
 				// stop what we're doing
-				instance.ProcessEvent(event);
+				plugin.ProcessEvent(event);
 				break;
 			}
-			instance.ProcessEvent(event);
+			plugin.ProcessEvent(event);
 		}
 
 		// plugin EOL
-		singleton.Destroy();
 		return 0;
 	}
 
