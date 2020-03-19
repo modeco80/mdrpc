@@ -9,7 +9,11 @@
 // the interval function with arguments
 //
 
+#ifdef DOXYGEN
+namespace Utils {
+#else
 namespace Utils LOCAL_SYM {
+#endif
 
     /**
      * Runs code at an specified interval in a new thread.
@@ -45,6 +49,7 @@ namespace Utils LOCAL_SYM {
          * 
          * \param[in] interval Interval to call function
          * \param[in] fun Function to call on an interval
+         * \param[in] initFun Function to call first
          */
         template<class F, class FInit>
         void Start(std::uint16_t interval, F fun, FInit initFun) {
@@ -97,7 +102,7 @@ namespace Utils LOCAL_SYM {
          * \param[in] fun Function to call
          */
         template<class F>
-        LOCAL_SYM void Runner(std::uint16_t interval, F fun) {
+        void Runner(std::uint16_t interval, F fun) {
             started = true;
 
             while(true) {
@@ -119,7 +124,7 @@ namespace Utils LOCAL_SYM {
          * \param[in] initFun run on thread init
          */
         template<class F, class FInit>
-      	LOCAL_SYM void Runner(std::uint16_t interval, F fun, FInit initFun) {
+      	void Runner(std::uint16_t interval, F fun, FInit initFun) {
             started = true;
 
             initFun();
@@ -143,7 +148,7 @@ namespace Utils LOCAL_SYM {
          * \param[in] fun Function to call
          */
         template<class F, class ...Args>
-        LOCAL_SYM void Runner(std::uint16_t interval, F fun, Args... args) {
+        void Runner(std::uint16_t interval, F fun, Args... args) {
             started = true;
 
             while(true) {

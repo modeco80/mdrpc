@@ -2,27 +2,27 @@
 #include <vector>
 #include <algorithm>
 
-#ifdef INTEST
+#ifdef DOXYGEN
 namespace Utils {
 #else
 namespace Utils LOCAL_SYM {
 #endif
 
 		/**
-		 * Function template that writes value into stream if it the given expression is false.
+		 * Function template that writes value into stream if the given expression is false.
 		 *
 		 * \param[in] stream Stream to write to
-		 * \param[in] value Value to write in
-		 * \param[in] fun Function to call
+		 * \param[in] value Value to write
+		 * \param[in] expr Expression to test
+		 *
 		 * \tparam T Type
-		 * \tparam TOStream Output stream type
-		 * \tparam TFun Function (Must return bool)
+		 * \tparam TOStream Output stream type (must have <<)
+		 * \tparam TFun Function (must return bool)
 		 */
 		template<typename T, typename TOStream, class TFun>
 		inline bool AddIf(TOStream& stream, const T& value, TFun expr) {
 			if(!expr(value)) {
 				if(!stream)
-					// insertion will most likely fail
 					return false;
 
 				stream << value;

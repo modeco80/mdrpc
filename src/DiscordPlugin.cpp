@@ -2,7 +2,11 @@
 #include "SymHide.hpp"
 #include "DiscordPlugin.hpp"
 
+#ifdef DOXYGEN
+namespace mdrpc {
+#else
 namespace mdrpc LOCAL_SYM {
+#endif
 
 	/**
 	 * Discord application ID
@@ -15,7 +19,7 @@ namespace mdrpc LOCAL_SYM {
 	constexpr static char discord_large[] = "mpv-logo";
 
 	/**
-	 * Small image key conversions of DiscordState
+	 * Small image key conversions of PlayerState
 	 */ 
 	constexpr std::array<const char*, PlayerState::Count_> discord_keys = {{
 		"mpv-idle",
@@ -25,7 +29,7 @@ namespace mdrpc LOCAL_SYM {
 	}};
 
 	/**
-	 * Human-readable conversions of DiscordState
+	 * Human-readable conversions of PlayerState
 	 */ 
 	constexpr std::array<const char*, PlayerState::Count_> current_states = {{
 		"Idle",

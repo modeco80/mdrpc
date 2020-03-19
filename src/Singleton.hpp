@@ -1,19 +1,32 @@
 #include <algorithm>
 
+#ifdef DOXYGEN
 namespace Utils {
+#else
+namespace Utils LOCAL_SYM {
+#endif
 	
+	/**
+	 * Class to allow only one single instance of
+	 * T to be allocated.
+	 *
+	 * \tparam T Type that should be made a singleton.
+	 */
 	template<typename T>
 	struct Singleton {
 
-		~Singleton() {
+		/**
+		 * Destructor for RAII-ness.
+		 */
+		inline ~Singleton() {
 			Destroy();
 		}		
 
 		/**
-		 * Gets the instance. Allocates instance if currently null
+		 * Gets the instance. Allocates instance if not allocated
 		 */
 		template<class... Args>
-		T& Get(Args... args) {
+		inline T& Get(Args... args) {
 			if(!instance_)
 				instance_ = new T(std::forward<Args>(args)...);
 
@@ -24,20 +37,20 @@ namespace Utils {
 		}
 		
 		/**
-		 * Destroy held instance
+		 * Destroy held instance if one exists.
 		 */
-		void Destroy() {
+		inline void Destroy() {
 		    if(instance_)
 				delete instance_;
 		}
 	private:
 		/**
-		 * Internal instance.
+		 * Internal single instance of T.
 		 */
 		static T* instance_;
 	};
 	
-	template<class T>
+	template<typename T>
 	T* Singleton<T>::instance_ = nullptr;
 
 }

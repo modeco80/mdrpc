@@ -6,7 +6,11 @@
 
 #include <discord_rpc.h>
 
+#ifdef DOXYGEN
+namespace mdrpc {
+#else
 namespace mdrpc LOCAL_SYM {
+#endif
 
 	/**
 	 * Player state enumeration
@@ -40,7 +44,7 @@ namespace mdrpc LOCAL_SYM {
 	private:
 
 		/**
-		 * \defgroup Discord functions
+		 * \defgroup RPCFunctions Discord RPC Functions
 		 * @{
 		 */
 

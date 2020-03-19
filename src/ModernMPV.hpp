@@ -18,7 +18,7 @@ namespace ModernMPV {
 
 	/**
 	 * Safe handle construct for handles to MPV.
-	 * Will throw exception if the handle is null
+	 * Will throw exception(s) if the handle is null.
 	 */
 	struct SafeHandle {
 
@@ -52,13 +52,14 @@ namespace ModernMPV {
 	};
 
 	namespace Properties {
+
 	/**
 	 * Macro to generate parts of the function body
 	 * that do not change for the following functions.
 	 */
-	#define MDN_GENERATE_BODY(T, PropertyT) T value; \
-											if(mpv_get_property(handle, property_name.c_str(), PropertyT, &value) < 0) \
-												return;	\
+	#define MDN_GENERATE_GET_BODY(T, PropertyT) T value; \
+			if(mpv_get_property(handle, property_name.c_str(), PropertyT, &value) < 0) \
+			return;	\
 
 		/**
 		 * Get an bool/flag property.
@@ -69,7 +70,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_bool(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(int, MPV_FORMAT_FLAG);
+			MDN_GENERATE_GET_BODY(int, MPV_FORMAT_FLAG);
 			callback(value);
 		}
 
@@ -82,7 +83,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_int64(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(std::int64_t, MPV_FORMAT_INT64);
+			MDN_GENERATE_GET_BODY(std::int64_t, MPV_FORMAT_INT64);
 			callback(value);
 		}
 
@@ -95,11 +96,9 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_double(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(double, MPV_FORMAT_DOUBLE);
+			MDN_GENERATE_GET_BODY(double, MPV_FORMAT_DOUBLE);
 			callback(value);
 		}
-
-		// == Raw / Not Reccomended for Use functions ==
 
 		/**
 		 * Get an string property in it's raw form.
@@ -111,7 +110,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_string_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(char*, MPV_FORMAT_STRING);
+			MDN_GENERATE_GET_BODY(char*, MPV_FORMAT_STRING);
 			callback(value);
 
 			// We get an allocation from the handle itself,
@@ -122,7 +121,7 @@ namespace ModernMPV {
 
 		/**
 		 * Get an string property with OSD formatting in its raw form.
-		 * Not reccomended. Use ModernMPV::Properties::get_string_osd() instead.
+		 * Not reccomended. Use ModernMPV::Properties::get_osd_string() instead.
 		 * 
 		 * \param[in] handle Safe handle to use
 		 * \param[in] property_name Name of property to fetch
@@ -147,7 +146,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_node(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
+			MDN_GENERATE_GET_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format == MPV_FORMAT_NODE_ARRAY || value.format == MPV_FORMAT_NODE_MAP) {
 				mpv_free_node_contents(&value);
@@ -168,7 +167,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		inline void get_node_map_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
+			MDN_GENERATE_GET_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format != MPV_FORMAT_NODE_MAP) {
 				mpv_free_node_contents(&value);
@@ -189,7 +188,7 @@ namespace ModernMPV {
 		 */
 		template<class Functor>
 		void get_node_array_raw(SafeHandle& handle, const std::string& property_name, Functor callback) {
-			MDN_GENERATE_BODY(mpv_node, MPV_FORMAT_NODE);
+			MDN_GENERATE_GET_BODY(mpv_node, MPV_FORMAT_NODE);
 			
 			if(value.format != MPV_FORMAT_NODE_ARRAY) {
 				mpv_free_node_contents(&value);
@@ -199,8 +198,6 @@ namespace ModernMPV {
 			callback(value);
 			mpv_free_node_contents(&value);
 		}
-
-		// === Conversions for Unsafe Functions ===
 
 		/**
 		 * Get an string property converted to a std::string.
@@ -250,7 +247,7 @@ namespace ModernMPV {
 		inline std::string get_node_string(mpv_node node) {
 			std::string str;
 
-			if(node.u.string == nullptr)
+			if(node.format != MPV_FORMAT_STRING)
 				return str; 
 
 			auto size = strlen(node.u.string);
@@ -311,5 +308,5 @@ namespace ModernMPV {
 		}
 
 	}
-#undef MDN_GENERATE_BODY
+#undef MDN_GENERATE_GET_BODY
 }
